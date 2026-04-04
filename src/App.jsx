@@ -149,7 +149,7 @@ quiz:[
 ]},
 {id:"m4",title:"Herramientas del Tester",desc:"Jira, Azure DevOps, Postman para API testing, SQL para investigación y Git básico.",
 lessons:[
-{id:"m4l1",title:"Jira y Azure DevOps",
+{id:"m4l1",title:"Jira, Azure y otras herramientas",
 intro:"No basta con saber que existen. Necesitas dominar los patrones que te hacen productivo como tester profesional.",
 sections:[
 {title:"Jira avanzado para QA",paragraphs:["Un tester senior usa Jira como centro de inteligencia de calidad:"],bullets:["Dashboards: bugs por severidad, por módulo, velocity de fix, aging de bugs críticos","JQL: project = CHECKOUT AND type = Bug AND severity = Critical AND status != Closed AND created >= -30d","Workflows: Open → In Progress → In Review → Verified → Closed (tester valida antes de cerrar)","Trazabilidad: linkear bugs ↔ test cases ↔ stories","Filtros guardados: \"Mis bugs\", \"Críticos sin asignar\", \"En verificación\""]},
@@ -285,11 +285,15 @@ parts:[
 // ── VIEWS ──
 const LessonView=({lesson,onComplete,isComplete})=>{
   const[tab,setTab]=useState(0);const[showSol,setShowSol]=useState(false);const[answer,setAnswer]=useState("");
-  useEffect(()=>{setTab(0);setShowSol(false);setAnswer("");},[lesson.id]);
+  const[visited,setVisited]=useState({0:true});
+  useEffect(()=>{setTab(0);setShowSol(false);setAnswer("");setVisited({0:true});},[lesson.id]);
+  const markVisited=(i)=>{setTab(i);setVisited(v=>({...v,[i]:true}));};
+  const allVisited=visited[0]&&visited[1]&&visited[2];
+  const tabNames=["Contenido","Insight Senior","Ejercicio"];
   return(
     <div style={{textAlign:"left"}}>
       <div style={{display:"flex",gap:6,marginBottom:24,flexWrap:"wrap"}}>
-        {["Contenido","Insight Senior","Ejercicio"].map((t,i)=><button key={i} onClick={()=>setTab(i)} style={{padding:"7px 16px",borderRadius:7,fontSize:13,fontWeight:600,fontFamily:"inherit",cursor:"pointer",border:`1px solid ${i===tab?T.accent:T.border}`,background:i===tab?T.accentBg:"transparent",color:i===tab?T.accentL:T.t4}}>{t}</button>)}
+        {tabNames.map((t,i)=>{const seen=visited[i];return <button key={i} onClick={()=>markVisited(i)} style={{padding:"7px 16px",borderRadius:7,fontSize:13,fontWeight:600,fontFamily:"inherit",cursor:"pointer",border:`1px solid ${i===tab?T.accent:seen?T.green:T.border}`,background:i===tab?T.accentBg:"transparent",color:i===tab?T.accentL:seen?T.green:T.t4}}>{seen&&i!==tab?"✓ ":""}{t}</button>;})}
       </div>
       {tab===0&&<div style={{display:"flex",flexDirection:"column",gap:18}}>
         <Section badge="Introducción" border={T.accent}><P>{lesson.intro}</P></Section>
@@ -305,7 +309,10 @@ const LessonView=({lesson,onComplete,isComplete})=>{
           {showSol&&<div style={{marginTop:14,padding:16,background:T.greenBg,borderRadius:8,borderLeft:`3px solid ${T.green}`}}><div style={{fontSize:10,fontWeight:700,color:T.green,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Referencia</div><ul style={{margin:0,paddingLeft:18}}>{lesson.exercise.solution.map((s,i)=><li key={i} style={{fontSize:13,lineHeight:1.85,color:T.t2,marginBottom:8}}>{s}</li>)}</ul></div>}
         </Section>
       </div>}
-      <div style={{display:"flex",justifyContent:"flex-end",marginTop:24}}><Btn onClick={onComplete} style={{background:isComplete?T.green:T.accent}}>{isComplete?"Completada ✓":"Marcar como completada"}</Btn></div>
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:24}}>
+        {!allVisited&&!isComplete&&<P style={{margin:"auto 12px auto 0",fontSize:12,color:T.t4}}>Visita las 3 secciones para completar</P>}
+        <Btn onClick={onComplete} disabled={!allVisited&&!isComplete} style={{background:isComplete?T.green:allVisited?T.accent:T.bg3,opacity:allVisited||isComplete?1:.5,cursor:allVisited||isComplete?"pointer":"default"}}>{isComplete?"Completada ✓":"Marcar como completada"}</Btn>
+      </div>
     </div>);
 };
 
