@@ -13,14 +13,14 @@ const T = {
 
 // ── Storage helpers ──
 const STORAGE_KEY = "qa-mastery-session";
-async function loadSession() {
+function loadSession() {
   try {
-    const r = await window.storage.get(STORAGE_KEY);
-    return r ? JSON.parse(r.value) : null;
-  } catch { return null; }
+    const d = localStorage.getItem(STORAGE_KEY);
+    return Promise.resolve(d ? JSON.parse(d) : null);
+  } catch { return Promise.resolve(null); }
 }
-async function saveSession(data) {
-  try { await window.storage.set(STORAGE_KEY, JSON.stringify(data)); } catch {}
+function saveSession(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
 }
 
 // ── Base Components ──
