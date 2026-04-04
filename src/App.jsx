@@ -1,1371 +1,477 @@
-import { useState, useCallback, useRef, useEffect, createContext, useContext } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
-/* ═══════════════════════════════════════════
-   THEME & SHARED STYLES
-   ═══════════════════════════════════════════ */
 const T = {
-  bg: "#080C14", bg1: "#0F1520", bg2: "#161D2E", bg3: "#1E2740",
-  border: "#1C2538", borderL: "#2A3550",
-  accent: "#6366F1", accentL: "#818CF8", accentBg: "#6366F115",
-  green: "#10B981", greenBg: "#10B98112", red: "#EF4444", redBg: "#EF444412",
-  amber: "#F59E0B", amberBg: "#F59E0B12",
-  t1: "#F1F5F9", t2: "#CBD5E1", t3: "#94A3B8", t4: "#64748B",
+  bg:"#080C14",bg1:"#0F1520",bg2:"#161D2E",bg3:"#1E2740",
+  border:"#1C2538",borderL:"#2A3550",
+  accent:"#6366F1",accentL:"#818CF8",accentBg:"#6366F115",
+  green:"#10B981",greenBg:"#10B98112",red:"#EF4444",redBg:"#EF444412",
+  amber:"#F59E0B",amberBg:"#F59E0B12",
+  t1:"#F1F5F9",t2:"#CBD5E1",t3:"#94A3B8",t4:"#64748B",
 };
 
-/* ═══════════════════════════════════════════
-   BASE COMPONENTS
-   ═══════════════════════════════════════════ */
-const Container = ({ children, style }) => (
-  <div style={{ maxWidth: 860, padding: "32px 28px", ...style }}>{children}</div>
-);
-
-const Section = ({ title, badge, badgeColor, children, style, border }) => (
-  <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderLeft: border ? `3px solid ${border}` : undefined, borderRadius: 10, padding: "22px 24px", ...style }}>
-    {(badge || title) && (
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        {badge && <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99, background: `${badgeColor || T.accent}15`, color: badgeColor || T.accent, letterSpacing: 0.5, textTransform: "uppercase" }}>{badge}</span>}
-        {title && <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: T.t1 }}>{title}</h3>}
-      </div>
-    )}
+const Section=({title,badge,badgeColor,children,style,border})=>(
+  <div style={{background:T.bg2,border:`1px solid ${T.border}`,borderLeft:border?`3px solid ${border}`:undefined,borderRadius:10,padding:"20px 22px",boxSizing:"border-box",...style}}>
+    {(badge||title)&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+      {badge&&<span style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:99,background:`${badgeColor||T.accent}15`,color:badgeColor||T.accent,letterSpacing:.5,textTransform:"uppercase"}}>{badge}</span>}
+      {title&&<h3 style={{margin:0,fontSize:16,fontWeight:700,color:T.t1,textAlign:"left"}}>{title}</h3>}
+    </div>}
     {children}
   </div>
 );
-
-const P = ({ children, style }) => <p style={{ fontSize: 14, lineHeight: 1.85, color: T.t2, margin: "0 0 12px", ...style }}>{children}</p>;
-
-const BulletList = ({ items, style }) => (
-  <ul style={{ margin: "8px 0 14px", paddingLeft: 20, ...style }}>
-    {items.map((item, i) => (
-      <li key={i} style={{ fontSize: 14, lineHeight: 1.85, color: T.t2, marginBottom: 6 }}>{item}</li>
-    ))}
-  </ul>
-);
-
-const Btn = ({ children, variant = "primary", size = "md", style, ...p }) => {
-  const s = size === "sm" ? { padding: "6px 14px", fontSize: 12 } : { padding: "10px 20px", fontSize: 13 };
-  const v = variant === "primary" ? { background: T.accent, color: "#fff", border: "none" }
-    : variant === "ghost" ? { background: "transparent", color: T.t3, border: "none" }
-    : { background: "transparent", border: `1px solid ${T.borderL}`, color: T.t3 };
-  return <button style={{ borderRadius: 7, cursor: "pointer", fontWeight: 600, fontFamily: "inherit", transition: "all .15s", ...s, ...v, ...style }} {...p}>{children}</button>;
+const P=({children,style})=><p style={{fontSize:14,lineHeight:1.85,color:T.t2,margin:"0 0 12px",textAlign:"left",...style}}>{children}</p>;
+const BL=({items})=><ul style={{margin:"8px 0 14px",paddingLeft:20,textAlign:"left"}}>{items.map((x,i)=><li key={i} style={{fontSize:14,lineHeight:1.85,color:T.t2,marginBottom:6}}>{x}</li>)}</ul>;
+const HL=({children})=><div style={{padding:"12px 16px",background:T.amberBg,borderLeft:`3px solid ${T.amber}`,borderRadius:6,marginTop:8}}><P style={{margin:0,color:T.t1,fontWeight:500}}>{children}</P></div>;
+const Btn=({children,variant="primary",size="md",style,...p})=>{
+  const sz=size==="sm"?{padding:"6px 14px",fontSize:12}:{padding:"10px 20px",fontSize:13};
+  const v=variant==="primary"?{background:T.accent,color:"#fff",border:"none"}:variant==="ghost"?{background:"transparent",color:T.t3,border:"none"}:{background:"transparent",border:`1px solid ${T.borderL}`,color:T.t3};
+  return <button style={{borderRadius:7,cursor:"pointer",fontWeight:600,fontFamily:"inherit",...sz,...v,...style}} {...p}>{children}</button>;
 };
-
-const Divider = () => <div style={{ height: 1, background: T.border, margin: "24px 0" }} />;
-
-const Pill = ({ children, active, done, onClick }) => (
-  <button onClick={onClick} style={{
-    padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", transition: "all .12s", whiteSpace: "nowrap",
-    border: `1px solid ${active ? T.accent : done ? T.green : T.border}`,
-    background: active ? T.accentBg : "transparent",
-    color: active ? T.accentL : done ? T.green : T.t4,
-  }}>{done && "✓ "}{children}</button>
+const Pill=({children,active,done,onClick})=>(
+  <button onClick={onClick} style={{padding:"5px 12px",borderRadius:6,fontSize:12,fontWeight:600,fontFamily:"inherit",cursor:"pointer",whiteSpace:"nowrap",border:`1px solid ${active?T.accent:done?T.green:T.border}`,background:active?T.accentBg:"transparent",color:active?T.accentL:done?T.green:T.t4}}>{done&&"✓ "}{children}</button>
 );
 
-/* ═══════════════════════════════════════════
-   DATA
-   ═══════════════════════════════════════════ */
-const MODULES = [
-  {
-    id: "m1", title: "Fundamentos del Testing",
-    desc: "Qué es el testing, por qué existe, tipos, STLC/SDLC y el rol real del tester en la industria.",
-    lessons: [
-      {
-        id: "m1l1", title: "Qué es el Testing y por qué existe",
-        intro: "El testing no es \"verificar que funcione\". Es una disciplina de ingeniería cuyo objetivo es reducir el riesgo de fallos en producción que impacten al negocio, a los usuarios o a la reputación de la empresa.",
-        sections: [
-          {
-            title: "El costo exponencial de los bugs",
-            paragraphs: [
-              "Un bug encontrado en requisitos cuesta x1. En desarrollo cuesta x10. En QA cuesta x100. En producción cuesta x1000. Esta progresión no es teórica — está respaldada por décadas de datos de la industria."
-            ],
-            bullets: [
-              "Knight Capital perdió $440M en 45 minutos por un bug en su sistema de trading automatizado",
-              "Facebook expuso 50 millones de tokens de acceso por un error de autenticación en 2018",
-              "No son errores de \"malos desarrolladores\" — son fallos sistémicos donde el testing fue insuficiente"
-            ]
-          },
-          {
-            title: "Por qué los humanos producen bugs",
-            paragraphs: [
-              "Los errores de software no son accidentes aleatorios. Son consecuencia de sesgos cognitivos predecibles:"
-            ],
-            bullets: [
-              "Sesgo de confirmación: el developer prueba que SU código funciona, no que falle",
-              "Efecto de anclaje: si algo funcionó ayer, asumimos que funciona hoy",
-              "Complejidad combinatoria: una app con 20 campos de 10 opciones tiene 10²⁰ combinaciones posibles",
-              "Nadie puede probar todo — necesitas ESTRATEGIA, no fuerza bruta"
-            ]
-          },
-          {
-            title: "Tu verdadero trabajo",
-            paragraphs: [
-              "No buscas bugs. Buscas RIESGO. Tu trabajo es responder una pregunta fundamental:"
-            ],
-            highlight: "¿Qué tan confiados estamos en que este software hace lo que debe, no hace lo que no debe, y sobrevive condiciones adversas?"
-          }
-        ],
-        senior: "En Big Tech, el QA no es un gate al final del proceso. Es un multiplicador de calidad que opera desde el diseño del requisito hasta el monitoreo en producción. Si esperas al código para empezar a testear, llegaste tarde.",
-        exercise: {
-          title: "Análisis de Riesgo Real",
-          scenario: "Eres el QA Lead asignado al checkout de un e-commerce que procesa $2M diarios. El equipo quiere lanzar \"Compra con un click\" (similar a Amazon 1-Click).",
-          task: "Identifica los 5 riesgos más críticos que testearías ANTES de producción. Para cada uno define: qué podría salir mal, impacto al negocio, y cómo lo testearías. NO pienses en \"casos de prueba\". Piensa en RIESGO.",
-          solution: [
-            "Doble cobro por click múltiple — Chargebacks masivos, pérdida de confianza. Test: simular clicks rápidos, verificar idempotencia del endpoint de pago.",
-            "Race condition en inventario — Vender producto agotado. Test: 100 usuarios simultáneos comprando el último ítem, verificar que solo 1 transacción se complete.",
-            "Método de pago expirado — Orden creada sin cobro. Test: tarjetas expiradas, fondos insuficientes, tarjetas bloqueadas.",
-            "Dirección de envío incorrecta por defecto — Re-envíos costosos. Test: múltiples direcciones, dirección default eliminada, dirección incompleta.",
-            "Fallo parcial en el flujo — Cobro sin orden o viceversa. Test: timeout del servicio de inventario post-cobro, verificar mecanismo de rollback."
-          ]
-        }
-      },
-      {
-        id: "m1l2", title: "Tipos de Testing — Taxonomía Real",
-        intro: "Cada tipo de testing existe por una razón específica. Si no sabes cuándo usar cada uno, desperdicias tiempo y recursos — o peor, dejas huecos de cobertura.",
-        sections: [
-          {
-            title: "Por nivel de ejecución",
-            bullets: [
-              "Unit Testing — Lo hace el developer. Verifica una función aislada. Si un tester escribe unit tests, algo está mal en el proceso.",
-              "Integration Testing — Tu territorio. Verificas que componentes hablan correctamente entre sí. ¿Qué pasa si el campo \"email\" viene null?",
-              "E2E (End-to-End) — Flujo completo como usuario real. El más costoso y frágil. Úsalo solo para happy paths críticos."
-            ]
-          },
-          {
-            title: "Por propósito",
-            bullets: [
-              "Smoke Testing — \"¿La app enciende?\" Funcionalidades críticas en menos de 15 minutos. Si tu smoke tarda 2 horas, no es smoke.",
-              "Regression Testing — Lo que funcionaba SIGUE funcionando. El 70% de bugs en producción son regresiones.",
-              "Sanity Testing — Subset enfocado de regression. \"Cambiamos pagos, verificamos solo pagos a profundidad.\"",
-              "Exploratory Testing — Testing CON charter, no clickear sin rumbo. \"En 30 min, exploro registro con datos extremos en campos opcionales.\""
-            ]
-          },
-          {
-            title: "La pirámide de testing",
-            paragraphs: [
-              "La distribución ideal de tests automatizados que usan los equipos de alto rendimiento:"
-            ],
-            bullets: [
-              "70% unit tests (rápidos, aislados, baratos)",
-              "20% integration tests (verifican contratos entre componentes)",
-              "10% E2E tests (solo happy paths críticos del negocio)"
-            ],
-            highlight: "Si tu suite E2E tiene 500 tests y tu integration tiene 50, tu arquitectura de testing está invertida y vas a sufrir con tests lentos y frágiles."
-          }
-        ],
-        senior: "Un tester que dice \"voy a hacer exploratory testing\" sin charter definido no está haciendo exploratory — está clickeando sin dirección. Siempre define: qué área, qué tipo de datos, cuánto tiempo, qué documentas.",
-        exercise: {
-          title: "Decide el Tipo de Testing",
-          scenario: "Para cada escenario, decide qué tipo(s) de testing aplicarías y justifica tu decisión.",
-          task: "1. Se cambió el color de un botón de \"Comprar\" de azul a verde.\n2. Se migró la DB de MySQL a PostgreSQL sin cambiar la API.\n3. Es viernes 4pm, hay un hotfix para un bug crítico en producción.\n4. El PM dice \"quiero asegurarme de que el checkout funciona bien en general\".",
-          solution: [
-            "Cambio de color — Visual regression test (screenshot comparison). Verificar que el click handler no se rompió. NO necesitas regression funcional completo.",
-            "Migración de DB — Integration testing extenso. Cada query debe retornar los mismos resultados. Performance comparison entre engines.",
-            "Hotfix viernes — Smoke testing SOLAMENTE del fix y área afectada. NO regression completo. Deploy con monitoreo activo.",
-            "\"Funciona bien en general\" — Esto NO es testeable. Tu respuesta: \"¿Qué significa bien? ¿Qué escenarios te preocupan? ¿Cambió algo reciente?\" Cuestionar requerimientos ambiguos es tu TRABAJO."
-          ]
-        }
-      },
-      {
-        id: "m1l3", title: "STLC, SDLC y tu Rol Real",
-        intro: "El error más común de un tester junior: esperar a que development termine para empezar a testear. En Big Tech, si esperas al código, llegaste tarde.",
-        sections: [
-          {
-            title: "STLC — Las 6 fases",
-            bullets: [
-              "Análisis de Requisitos — Encontrar ambigüedades y gaps ANTES de que se escriba código. Tu mayor multiplicador de valor.",
-              "Planificación — Qué testeas, qué NO testeas (igualmente importante), herramientas, tiempo, criterios de entrada y salida.",
-              "Diseño de Casos — Técnicas formales para derivar tests. No improvisación.",
-              "Configuración del Ambiente — Datos de prueba, staging, mocks de servicios externos.",
-              "Ejecución — Correr tests, documentar resultados, reportar bugs.",
-              "Cierre — Métricas, lecciones aprendidas, qué se escapó y por qué."
-            ]
-          },
-          {
-            title: "En la práctica Agile",
-            paragraphs: [
-              "Todo esto ocurre dentro de un sprint de 2 semanas. El tester participa en refinement, estima esfuerzo de testing, hace shift-left (testing temprano) y shift-right (monitoreo en producción)."
-            ],
-            highlight: "No eres un paso en el proceso. Eres un participante continuo."
-          },
-          {
-            title: "Tu influencia real",
-            paragraphs: [
-              "En Google, los SDET tienen la misma voz que los SWE. Pueden bloquear un release si la calidad no cumple el estándar. Esa autoridad se gana con CRITERIO, no con título."
-            ]
-          }
-        ],
-        senior: "Shift-left significa que tus preguntas en el refinement de una story evitan más bugs que tus tests en el sprint. Una sola pregunta sobre un edge case puede ahorrar 3 días de desarrollo y 2 bugs en producción.",
-        exercise: {
-          title: "Shift-Left en Acción",
-          scenario: "Te entregan esta user story:\n\n\"Como usuario, quiero poder resetear mi contraseña para acceder a mi cuenta cuando la olvide.\"\n\nCriterios de aceptación: email con link de reset, link expira en 24h, contraseña debe cumplir políticas de seguridad.",
-          task: "ANTES de que se escriba código, identifica al menos 8 preguntas o ambigüedades que deberías escalar al PM o equipo de desarrollo.",
-          solution: [
-            "¿Múltiples resets invalidan links anteriores?",
-            "\"Políticas de seguridad\" — ¿cuáles exactamente? ¿Longitud? ¿Caracteres? ¿No repetir últimas N?",
-            "¿Rate limiting? ¿Cuántos intentos por hora?",
-            "Si el email NO existe, ¿qué mensaje? (\"No encontrado\" permite enumeración de usuarios)",
-            "¿Link de un solo uso o múltiples dentro de 24h?",
-            "¿Qué pasa si el usuario cambia su email después de solicitar reset?",
-            "¿Se cierra sesión en todos los dispositivos después del cambio?",
-            "¿Notificación de que la contraseña fue cambiada? (detección de compromiso)",
-            "¿Proxies enterprise que hacen prefetch de links invalidan el token?",
-            "¿Interacción con 2FA?"
-          ]
-        }
-      }
-    ],
-    quiz: [
-      { q: "Un bug encontrado en requisitos cuesta x1. ¿Cuánto cuesta en producción?", o: ["x10", "x100", "x1000", "x50"], a: 2 },
-      { q: "¿Cuál es la distribución correcta de la pirámide de testing?", o: ["70% E2E, 20% Integration, 10% Unit", "70% Unit, 20% Integration, 10% E2E", "33% cada uno", "50% Integration, 30% Unit, 20% E2E"], a: 1 },
-      { q: "Exploratory testing sin charter definido es:", o: ["Testing creativo", "Clickear sin dirección", "Testing ágil válido", "Ad-hoc testing aceptable"], a: 1 },
-      { q: "¿Qué es shift-left testing?", o: ["Testear más rápido", "Involucrar testing desde fases tempranas", "Mover tests a la izquierda del dashboard", "Automatizar antes de diseñar"], a: 1 },
-      { q: "El PM dice \"quiero que el checkout funcione bien\". Tu respuesta:", o: ["Testear todo exhaustivamente", "Preguntar qué significa \"bien\", qué preocupa, si hubo cambios", "Decir que no es tu responsabilidad", "Ejecutar el smoke test estándar"], a: 1 },
-      { q: "El 70% de bugs en producción son:", o: ["Bugs nuevos de features", "Regresiones", "Problemas de performance", "Errores de UI"], a: 1 },
-    ]
-  },
-  {
-    id: "m2", title: "Diseño de Pruebas",
-    desc: "Técnicas formales para derivar casos de prueba: partición de equivalencia, valores límite, tablas de decisión, state transition y RTM.",
-    lessons: [
-      {
-        id: "m2l1", title: "Partición de Equivalencia y Valores Límite",
-        intro: "Estas dos técnicas generan el mayor valor por esfuerzo invertido. Reducen miles de combinaciones a un conjunto manejable y efectivo.",
-        sections: [
-          {
-            title: "Partición de Equivalencia (EP)",
-            paragraphs: ["Divide el dominio de entrada en clases donde todos los valores se comportan igual. Testeas UN valor representativo por clase."],
-            bullets: [
-              "Ejemplo — Campo \"edad\" para seguro de auto:",
-              "Inválida: < 18 (no puede contratar)",
-              "Válida 1: 18-25 (tarifa joven) | Válida 2: 26-65 (estándar) | Válida 3: 66-99 (senior)",
-              "Inválida: > 99, no numérico, negativo, decimal",
-              "Con 7 tests cubres un dominio de miles de valores"
-            ]
-          },
-          {
-            title: "Análisis de Valores Límite (BVA)",
-            paragraphs: ["Los bugs viven en los bordes. SIEMPRE. Si el rango válido es 18-65:"],
-            bullets: [
-              "Testeas: 17 (inválido), 18 (mínimo), 19 (mínimo+1), 64 (máximo-1), 65 (máximo), 66 (inválido)",
-              "Monto de transferencia ($1 min, $10K max): $0.99, $1.00, $1.01, $9,999.99, $10,000.00, $10,000.01",
-              "También incluir: $0.00, $0.01, -$0.01"
-            ],
-            highlight: "Testear $5,000 porque \"es un valor intermedio\" no encuentra NADA que no encuentre $1.01. Desperdicias ejecución."
-          }
-        ],
-        senior: "Cuando un developer dice \"ya probé con datos normales y funciona\", tu pregunta es: \"¿Probaste en los límites?\" El 80% de los bugs de validación están en los bordes, no en el medio del rango.",
-        exercise: {
-          title: "Diseña Tests con EP y BVA",
-          scenario: "Formulario de registro de servicio de streaming.",
-          task: "Campos:\n- Username: 3-20 chars, alfanumérico, sin espacios\n- Contraseña: 8-64 chars, mín 1 mayúscula, 1 número, 1 especial\n- Fecha de nacimiento: mayor de 13 años\n- Código postal: 5 dígitos (US)\n\nPara CADA campo define: clases de equivalencia, valores límite, mínimo 3 casos. Bonus: interacciones entre campos.",
-          solution: [
-            "Username — EP válida: \"user123\". Inválidas: \"ab\" (corto), \"user name\" (espacio), \"user@!\" (especiales). BVA: 2 chars (inv), 3 (mín), 20 (máx), 21 (inv).",
-            "Contraseña — Inválidas: sin mayúscula, sin número, sin especial, 7 chars. BVA: 7 (inv), 8 (mín), 64 (máx), 65 (inv).",
-            "Fecha — BVA: exactamente 13 años hoy (límite), 12 años 364 días (inv). ¿Qué zona horaria para calcular?",
-            "Interacciones: ¿username = email prefix? ¿Username dentro de contraseña (debería rechazarse)? ¿Exactamente 13 años HOY en qué timezone?"
-          ]
-        }
-      },
-      {
-        id: "m2l2", title: "Tablas de Decisión y State Transition",
-        intro: "Cuando el comportamiento depende de combinaciones de condiciones o de estados del sistema, necesitas técnicas que mapeen la complejidad de forma sistemática.",
-        sections: [
-          {
-            title: "Tablas de Decisión",
-            paragraphs: ["Mapean todas las combinaciones de condiciones y su resultado esperado. Ejemplo — envío gratis en e-commerce:"],
-            bullets: [
-              "Condiciones: ¿Es Prime? ¿Monto > $50? ¿Producto elegible?",
-              "2³ = 8 combinaciones posibles, cada una es un caso de prueba",
-              "Sin la tabla, te pierdes combinaciones garantizado",
-              "Es matemática, no intuición"
-            ]
-          },
-          {
-            title: "State Transition Testing",
-            paragraphs: ["Para sistemas con estados definidos. Mapeas estados, transiciones válidas, transiciones INVÁLIDAS y guardas (condiciones)."],
-            bullets: [
-              "Ejemplo — Pedido: Pending → Paid → Processing → Shipped → Delivered",
-              "También: Pending → Cancelled, Paid → Refunded",
-              "Lo CRÍTICO: testear transiciones INVÁLIDAS. ¿Puedes pasar de Delivered a Pending?",
-              "Si el sistema lo permite, tienes un bug de integridad de estado"
-            ],
-            highlight: "En Big Tech, los state machines están en todas partes: estados de usuario, pagos, deployments, feature flags. Si no mapeas estados, no puedes testear transiciones inválidas."
-          }
-        ],
-        senior: "Las tablas de decisión son tu arma más poderosa en refinements. Cuando el PM dice \"si es premium Y tiene más de $100, envío gratis\", tú preguntas: \"¿Y las otras 6 combinaciones?\"",
-        exercise: {
-          title: "State Transition de Cuenta Financiera",
-          scenario: "Plataforma financiera tipo PayPal.",
-          task: "Estados: Pending Verification, Active, Suspended, Locked, Closed, Banned.\n\nReglas: nueva cuenta en Pending, se activa con KYC, se suspende por actividad sospechosa, se bloquea tras 5 intentos fallidos, cierre voluntario, ban permanente por fraude.\n\nDefine: 1) Transiciones válidas 2) 5 transiciones inválidas que DEBES verificar que se rechacen 3) Qué pasa con el saldo en cada transición.",
-          solution: [
-            "Válidas: Pending→Active (KYC), Active→Suspended, Active→Locked (5 intentos), Active→Closed, Suspended→Active, Suspended→Banned, Locked→Active (reset).",
-            "Inválidas: Banned→Active (NUNCA, ban permanente), Closed→Active (requiere nuevo registro), Pending→Suspended (no puedes suspender lo no activado), Banned→Closed (ban overrides), Delivered→Pending.",
-            "Saldo: Suspended = congelado. Closed = debe ser $0 antes. Banned = retenido para investigación legal."
-          ]
-        }
-      },
-      {
-        id: "m2l3", title: "Casos de Prueba Profesionales y RTM",
-        intro: "Un caso de prueba mal escrito es un caso que no puede ejecutar nadie más que tú. Tus casos deben ser autónomos, reproducibles y trazables.",
-        sections: [
-          {
-            title: "Anatomía de un caso profesional",
-            bullets: [
-              "ID y título descriptivo: TC-LOGIN-001 — Login exitoso con credenciales válidas",
-              "Precondiciones: usuario registrado con email y password específicos",
-              "Ambiente: Chrome 120+, staging environment",
-              "Pasos: numerados, exactos, con datos concretos",
-              "Resultado esperado: redirect a /dashboard en <3s, cookie de sesión creada",
-              "Prioridad: P0 (smoke test)",
-              "Trazabilidad: REQ-AUTH-001"
-            ],
-            highlight: "Regla: cualquier persona del equipo debe poder ejecutar tu caso y obtener el MISMO resultado. Si necesitan preguntarte algo, el caso está mal escrito."
-          },
-          {
-            title: "Requirements Traceability Matrix (RTM)",
-            paragraphs: ["Tabla que mapea: Requisito → Caso(s) de prueba → Estado → Bugs encontrados."],
-            bullets: [
-              "Si un requisito no tiene casos mapeados = NO ESTÁ CUBIERTO",
-              "Si un caso no mapea a ningún requisito = test huérfano, probablemente innecesario",
-              "La RTM se mantiene viva cada sprint, no es un documento que creas y olvidas"
-            ]
-          }
-        ],
-        senior: "En Amazon, cada test case tiene un \"blast radius\" asociado: si este test falla, ¿a cuántos usuarios y cuánto revenue afecta? Eso determina su prioridad y si bloquea el release.",
-        exercise: {
-          title: "Escribe Casos de Prueba Profesionales",
-          scenario: "Feature: Carrito de compras con código de descuento.",
-          task: "Reglas: solo UN código por orden, \"SAVE10\" = 10%, \"FLAT20\" = $20 si total > $100, códigos expiran, no aplica a Clearance, envío NO se descuenta.\n\nEscribe 8 casos profesionales (formato completo). Incluye mínimo 2 negativos y 1 de interacción entre reglas.",
-          solution: [
-            "TC-001: SAVE10 en orden $200 (regular) → descuento $20, total $180",
-            "TC-002: FLAT20 en orden $150 → descuento $20, total $130",
-            "TC-003 (neg): FLAT20 en orden $80 → rechazado, mensaje \"Mínimo $100\"",
-            "TC-004 (neg): Código expirado → rechazado con mensaje claro",
-            "TC-005: Dos códigos → segundo rechazado",
-            "TC-006 (interacción): SAVE10 en carrito mixto (regular $100 + clearance $50) → descuento solo sobre $100 = $10",
-            "TC-007: Envío $9.99 NO se descuenta con SAVE10",
-            "TC-008: Aplicar SAVE10, eliminar items hasta $0 → descuento recalculado"
-          ]
-        }
-      }
-    ],
-    quiz: [
-      { q: "En EP, ¿cuántos valores se testean por clase?", o: ["Todos", "Uno representativo", "Tres", "Depende"], a: 1 },
-      { q: "¿Dónde están la mayoría de bugs de validación?", o: ["Valores intermedios", "Bordes/límites del rango", "Valores nulos", "Valores negativos"], a: 1 },
-      { q: "Tabla de decisión con 4 condiciones binarias genera:", o: ["4 combinaciones", "8", "16", "32"], a: 2 },
-      { q: "En State Transition, ¿qué es MÁS importante testear?", o: ["Transiciones válidas", "Transiciones INVÁLIDAS", "Estado inicial/final", "Transiciones frecuentes"], a: 1 },
-      { q: "\"Verificar que el login funciona\" como caso de prueba es:", o: ["Aceptable", "Insuficiente — falta datos, pasos y resultado esperado", "Válido si el equipo conoce el sistema", "Buen caso de alto nivel"], a: 1 },
-    ]
-  },
-  {
-    id: "m3", title: "Bugs y Gestión de Calidad",
-    desc: "Documentación profesional, severidad vs prioridad con criterio real, y decisiones de priorización.",
-    lessons: [
-      {
-        id: "m3l1", title: "Documentación de Bugs",
-        intro: "Un bug mal documentado es un bug que no se arregla. En Big Tech, tu reporte es tu credibilidad profesional.",
-        sections: [
-          {
-            title: "Estructura de un bug report profesional",
-            bullets: [
-              "Título descriptivo y buscable. NO: \"Login no funciona\". SÍ: \"Login returns 500 when email contains + character\"",
-              "Ambiente: OS, browser/version, API version, staging/prod, fecha/hora",
-              "Pasos exactos, numerados, con DATOS ESPECÍFICOS. Reproducible en <5 min",
-              "Resultado actual con evidencia (screenshot, video, logs, HTTP response)",
-              "Resultado esperado según spec o sentido común",
-              "Frecuencia: siempre / intermitente (3 de 10) / una vez",
-              "Impacto: quién se afecta, cuántos usuarios, impacto al negocio"
-            ]
-          },
-          {
-            title: "Severidad vs Prioridad",
-            paragraphs: ["Esta es la confusión más común en QA. Son dimensiones DIFERENTES:"],
-            bullets: [
-              "Severidad = impacto TÉCNICO. Critical → High → Medium → Low",
-              "Prioridad = urgencia de NEGOCIO. P0 (hotfix now) → P1 (este sprint) → P2 → P3 (backlog)",
-              "Un typo en el nombre del CEO en landing = severidad LOW, prioridad P0",
-              "Un crash en flujo del 0.1% de usuarios = severidad CRITICAL, puede ser P2"
-            ],
-            highlight: "El tester asigna severidad. El PO/PM asigna prioridad. Si mezclas ambos, pierdes poder de comunicación."
-          }
-        ],
-        senior: "Un bug report excelente incluye una hipótesis: \"Posiblemente el endpoint no sanitiza el carácter + antes de la query SQL.\" Esto acelera el fix y demuestra que entiendes el sistema, no solo la superficie.",
-        exercise: {
-          title: "Documenta Este Bug",
-          scenario: "Testeando app de delivery. Pedido $45.50, cupón WELCOME50 (50% off). Descuento aplicado ($22.75). Tarjeta cobrada $22.75 (correcto). Email de confirmación: $22.75 (correcto).",
-          task: "PERO: en historial de pedidos muestra $45.50 (sin descuento).\n\nEscribe el bug report completo. Define severidad y prioridad con justificación.",
-          solution: [
-            "Título: Order history displays pre-discount amount ($45.50) instead of charged amount ($22.75) after WELCOME50 coupon",
-            "Severidad: Medium — No hay pérdida financiera, pero genera confusión y tickets de soporte",
-            "Prioridad: P1 — Nuevos usuarios (target del cupón) verán discrepancia, genera desconfianza y afecta retention",
-            "Hipótesis: Order history lee subtotal pre-descuento en lugar del total post-descuento de la tabla de transacciones"
-          ]
-        }
-      },
-      {
-        id: "m3l2", title: "Criterio Real para Clasificar Bugs",
-        intro: "La diferencia entre un junior y un senior no es encontrar más bugs — es saber clasificarlos y comunicar su impacto real al equipo.",
-        sections: [
-          {
-            title: "Red flags: bugs que siempre son P0",
-            bullets: [
-              "Cualquier bug que involucre dinero (cobro incorrecto, doble cobro)",
-              "Exposición de datos de otro usuario (IDOR, data leak)",
-              "Bypass de autenticación o autorización",
-              "Pérdida de datos irrecuperable",
-              "Bloqueo del flujo principal para más del 5% de usuarios"
-            ],
-            highlight: "Si encuentras alguno de estos, no esperes al próximo standup. Escala INMEDIATAMENTE."
-          },
-          {
-            title: "El framework de priorización",
-            paragraphs: ["Un tester senior cruza severidad técnica con múltiples factores de negocio:"],
-            bullets: [
-              "¿Cuántos usuarios están afectados?",
-              "¿Hay workaround disponible?",
-              "¿Es regresión? (antes funcionaba)",
-              "¿Puede empeorar con el tiempo?",
-              "¿Es one-way door (irreversible) o two-way door (se puede revertir)?"
-            ]
-          }
-        ],
-        senior: "En Amazon: \"one-way door\" vs \"two-way door\". Pérdida de datos = one-way (irreversible), SIEMPRE P0. Bug visual que se puede hotfixear = two-way, puede esperar.",
-        exercise: {
-          title: "Clasifica y Prioriza",
-          scenario: "6 bugs reportados, capacidad para arreglar solo 3 este sprint.",
-          task: "1. App crashea en foto de perfil (iPhone 12 / iOS 17)\n2. Botón \"Cancelar suscripción\" no funciona (debe llamar a soporte)\n3. Emails transaccionales con 30 min de delay\n4. Dashboard admin muestra métricas del día anterior\n5. Memory leak: app lenta después de 4h de uso\n6. Búsqueda con filtro de precio en orden incorrecto\n\nClasifica cada uno y elige los 3 que arreglas ESTE sprint.",
-          solution: [
-            "Priorizo: #2 (P0 — posible violación legal en UE/California, usuarios atrapados en suscripción)",
-            "#1 (P1 — crash visible, iPhone 12 es dispositivo común, afecta experiencia directa)",
-            "#3 (P1 — emails de transacción tardíos causan ansiedad post-compra y tickets de soporte)",
-            "Próximo sprint: #5 (afecta uso prolongado, minoría), #4 (admin-only), #6 (molesto pero no bloquea compra)"
-          ]
-        }
-      }
-    ],
-    quiz: [
-      { q: "Un typo en el nombre del CEO en la landing page:", o: ["Sev HIGH, P0", "Sev LOW, P0", "Sev LOW, P3", "Sev MED, P1"], a: 1 },
-      { q: "¿Quién asigna prioridad?", o: ["El tester", "El developer", "El Product Owner / PM", "El QA Lead"], a: 2 },
-      { q: "Un endpoint que devuelve datos de OTRO usuario:", o: ["Sev Medium, P2", "Sev Critical, P0", "Sev Low si nadie reportó", "Sev High, P1"], a: 1 },
-      { q: "Un crash que afecta al 0.1% de usuarios:", o: ["Sev Low (pocos usuarios)", "Sev Critical (crash siempre es critical)", "Sev Medium", "No es bug"], a: 1 },
-    ]
-  },
-  {
-    id: "m4", title: "Herramientas del Tester",
-    desc: "Jira avanzado, Postman para API testing, SQL para investigación de datos, y Git básico.",
-    lessons: [
-      {
-        id: "m4l1", title: "Jira, Postman, SQL y Git",
-        intro: "No basta con saber que existen. Necesitas dominar los patrones que te hacen productivo todos los días.",
-        sections: [
-          {
-            title: "Jira avanzado para QA",
-            bullets: [
-              "Dashboards de calidad: bugs abiertos por severidad, por módulo, velocity de fix",
-              "JQL: project = CHECKOUT AND type = Bug AND severity = Critical AND created >= -30d",
-              "Workflows: Open → In Progress → In Review → Verified → Closed",
-              "Trazabilidad: linkear bugs a test cases y stories"
-            ]
-          },
-          {
-            title: "API Testing con Postman",
-            paragraphs: ["El 80% del testing crítico moderno es a nivel de API. La UI es solo la punta del iceberg."],
-            bullets: [
-              "Construir requests GET/POST/PUT/DELETE con datos reales",
-              "Variables de ambiente (staging vs prod) para cambiar rápido",
-              "Tests automatizados en la tab Tests de Postman",
-              "Collections con flujos completos: register → login → create order → verify",
-              "Pre-request scripts para datos dinámicos"
-            ]
-          },
-          {
-            title: "SQL para investigación",
-            paragraphs: ["Queries que encuentran lo que la UI nunca te mostraría:"],
-            bullets: [
-              "SELECT * FROM orders WHERE user_id = 123 AND status = 'pending';",
-              "SELECT o.id, u.email FROM orders o JOIN users u ON o.user_id = u.id WHERE o.total != o.subtotal - o.discount;",
-              "La segunda query encuentra inconsistencias de datos invisibles desde la UI"
-            ]
-          },
-          {
-            title: "Git básico",
-            paragraphs: ["No necesitas ser experto. Necesitas: clone, pull, branch, checkout, log, diff."],
-            highlight: "Con git diff ves qué cambió en el último commit y enfocas tu regression testing en lo que realmente se modificó."
-          }
-        ],
-        senior: "Un tester que solo usa la UI para verificar bugs es un tester a medias. El 50% de los bugs están en la capa de datos y solo los encuentras consultando la base de datos directamente.",
-        exercise: {
-          title: "Investigación con SQL",
-          scenario: "Tablas: users (id, email, plan_type, created_at), orders (id, user_id, total, discount, final_amount, status), payments (id, order_id, amount, status).",
-          task: "Reportan: \"Algunos usuarios Premium no recibieron su descuento del 15%.\"\n\nEscribe queries para:\n1. Encontrar órdenes Premium sin descuento correcto\n2. Verificar si el cobro coincide con final_amount\n3. Desde cuándo empezó el problema",
-          solution: [
-            "1. SELECT o.id, u.email, o.total, o.discount, ROUND(o.total*0.15, 2) AS expected FROM orders o JOIN users u ON o.user_id=u.id WHERE u.plan_type='premium' AND o.discount != ROUND(o.total*0.15, 2);",
-            "2. SELECT o.id, o.final_amount, p.amount, (o.final_amount - p.amount) AS diff FROM orders o JOIN payments p ON p.order_id=o.id WHERE o.final_amount != p.amount AND p.status='completed';",
-            "3. SELECT MIN(o.created_at) FROM orders o JOIN users u ON o.user_id=u.id WHERE u.plan_type='premium' AND o.discount != ROUND(o.total*0.15, 2);"
-          ]
-        }
-      }
-    ],
-    quiz: [
-      { q: "¿Qué % del testing crítico es a nivel de API?", o: ["30%", "50%", "80%", "95%"], a: 2 },
-      { q: "JQL sirve para:", o: ["Tests automatizados", "Queries avanzadas de tickets", "Conectar con DB", "Reportes de código"], a: 1 },
-      { q: "¿Por qué SQL para un tester?", o: ["Crear tablas", "Verificar datos que la UI no muestra", "Optimizar queries", "Solo si no hay dev"], a: 1 },
-    ]
-  },
-  {
-    id: "m5", title: "Automatización de Testing",
-    desc: "Estrategia de automatización, cuándo sí y cuándo no, Playwright, y CI/CD para testers.",
-    lessons: [
-      {
-        id: "m5l1", title: "Estrategia de Automatización",
-        intro: "La automatización no es un objetivo — es una herramienta. El anti-patrón más costoso es automatizar todo sin estrategia.",
-        sections: [
-          {
-            title: "Cuándo SÍ automatizar",
-            bullets: [
-              "Lo que ejecutas más de 3 veces y es estable",
-              "Smoke tests en cada build",
-              "Regression de flujos core (login, checkout, CRUD principal)",
-              "Validaciones de API (contratos, schemas, status codes)",
-              "Data validation automatizada contra DB"
-            ]
-          },
-          {
-            title: "Cuándo NO automatizar",
-            bullets: [
-              "Exploratory testing (no es automatizable por definición)",
-              "Tests que cambian cada sprint (alto costo de mantenimiento)",
-              "UX/usabilidad (requiere juicio humano)",
-              "Features inestables en desarrollo activo",
-              "Validaciones one-time"
-            ]
-          },
-          {
-            title: "El anti-patrón de los 2000 E2E tests",
-            paragraphs: ["Equipos que automatizan todo terminan con:"],
-            bullets: [
-              "Suite de 4 horas de duración",
-              "30% de tests flaky que nadie confía",
-              "Más tiempo manteniendo tests que testeando",
-              "Fatiga de alertas → se ignoran los fallos reales"
-            ],
-            highlight: "Distribución correcta: 70% API/integration (rápidos, estables), 20% componente, 10% E2E (solo happy paths críticos)."
-          }
-        ],
-        senior: "En Meta, si un test falla más de 2 veces sin ser bug real (flaky), se desactiva automáticamente y se crea ticket para arreglarlo. Un test flaky es PEOR que no tener test.",
-        exercise: {
-          title: "Decide Qué Automatizar",
-          scenario: "App de gestión de proyectos. Capacidad: 20 tests esta semana.",
-          task: "Candidatos:\n1. Login email/password\n2. Login Google SSO\n3. Crear proyecto\n4. Drag & drop de tareas\n5. Invitar usuario\n6. Filtrar tareas\n7. Subir archivos\n8. Notificaciones real-time\n9. Exportar a CSV\n10. Theme light/dark\n11. API: CRUD tareas\n12. API: Permisos\n13. API: Rate limiting\n14. Flujo completo E2E\n\n¿Cuáles priorizas y por qué?",
-          solution: [
-            "Top: #1 (smoke), #11 (API CRUD, alto ROI), #12 (seguridad), #3 (flujo core), #14 (E2E principal), #6 (regression frecuente), #13 (previene abuso)",
-            "NO automatizar: #4 (drag&drop frágil), #8 (real-time complejo/flaky), #10 (bajo valor), #2 (SSO requiere mocks complejos)",
-            "Criterio: API tests > E2E por estabilidad y velocidad"
-          ]
-        }
-      },
-      {
-        id: "m5l2", title: "Playwright y CI/CD",
-        intro: "Playwright es la herramienta moderna de referencia. Soporta múltiples browsers, auto-wait inteligente y network interception.",
-        sections: [
-          {
-            title: "Estructura profesional de tests",
-            paragraphs: ["Un test automatizado profesional se ve así:"],
-            bullets: [
-              "Usa data-testid como selector, NUNCA selectores CSS frágiles",
-              "Assertions explícitas: expect(page).toHaveURL('/dashboard')",
-              "Datos de prueba independientes — cada test crea su propia data",
-              "Tests paralelos e independientes — sin dependencias entre tests"
-            ]
-          },
-          {
-            title: "Buenas prácticas obligatorias",
-            bullets: [
-              "Page Object Model: cuando cambia un selector, actualizas 1 archivo, no 47 tests",
-              "Screenshots y traces automáticos en fallo",
-              "Retry configurado (máximo 1) para manejar flakiness",
-              "Reportes claros: qué pasó, dónde, con qué datos"
-            ]
-          },
-          {
-            title: "CI/CD Integration",
-            paragraphs: ["En Big Tech, los tests corren en cada Pull Request. Si falla, el merge se bloquea automáticamente."],
-            highlight: "El tester es responsable de que la suite sea confiable. Un test flaky que bloquea deploys es un problema de TU equipo, no del CI."
-          }
-        ],
-        senior: "Page Object Model no es opcional. Sin él, cuando cambia un selector actualizas 47 tests. Con él, actualizas 1 archivo. Es la diferencia entre un framework mantenible y uno que abandonas en 3 meses.",
-        exercise: {
-          title: "Escribe Tests Automatizados",
-          scenario: "Flujo de e-commerce: buscar producto, agregar al carrito, verificar total.",
-          task: "Escribe código Playwright para:\n1. Buscar producto por nombre\n2. Seleccionar primer resultado, elegir cantidad 2\n3. Agregar al carrito\n4. Verificar item con cantidad 2 y total correcto\n5. Incluir un caso negativo (producto agotado)",
-          solution: [
-            "test('add to cart', async({page})=> { await page.goto('/products'); await page.fill('[data-testid=\"search\"]', 'Mouse'); await page.click('[data-testid=\"product-card\"]:first-child'); ...",
-            "await page.selectOption('[data-testid=\"qty\"]', '2'); const price = await page.textContent('[data-testid=\"price\"]');",
-            "await page.click('[data-testid=\"add-to-cart\"]'); await page.goto('/cart');",
-            "await expect(page.locator('[data-testid=\"qty\"]')).toHaveText('2');",
-            "test('out of stock', async({page})=> { await page.goto('/products/oos-123'); await expect(page.locator('[data-testid=\"add-to-cart\"]')).toBeDisabled(); });"
-          ]
-        }
-      }
-    ],
-    quiz: [
-      { q: "El anti-patrón más costoso en automatización:", o: ["No automatizar nada", "Automatizar TODO sin estrategia", "Usar Selenium", "No usar CI/CD"], a: 1 },
-      { q: "Un test flaky es peor que no tener test porque:", o: ["Es más lento", "Genera fatiga de alertas y nadie confía en resultados", "Consume recursos", "Es difícil de debuggear"], a: 1 },
-      { q: "¿Por qué data-testid sobre selectores CSS?", o: ["Más rápidos", "Estables ante cambios de diseño", "Requeridos por Playwright", "Mejoran accesibilidad"], a: 1 },
-      { q: "Page Object Model se usa para:", o: ["Mejorar performance", "Centralizar selectores y reducir mantenimiento", "Conectar con DB", "Generar reportes"], a: 1 },
-    ]
-  },
-  {
-    id: "m6", title: "Testing Avanzado",
-    desc: "Performance, seguridad básica, microservicios, contract testing y chaos engineering.",
-    lessons: [
-      {
-        id: "m6l1", title: "Performance, Seguridad y Microservicios",
-        intro: "En sistemas distribuidos modernos, el testing funcional es solo el punto de partida. Los fallos más costosos son de performance, seguridad e integración entre servicios.",
-        sections: [
-          {
-            title: "Performance Testing",
-            bullets: [
-              "Load: ¿soporta 1000 usuarios simultáneos en hora pico?",
-              "Stress: ¿cuándo se rompe? Incrementar hasta el fallo.",
-              "Soak: ¿se degrada en 24h de carga constante? (memory leaks)",
-              "Spike: ¿sobrevive de 100 a 10,000 usuarios en 2 min? (Black Friday)"
-            ],
-            paragraphs: ["Herramientas: k6, JMeter, Gatling, Locust. Métricas clave: response time (p50, p95, p99), throughput (RPS), error rate."],
-            highlight: "El p99 es lo que importa. Si p50=200ms pero p99=5s, con 10M usuarios son 100K personas con experiencia terrible."
-          },
-          {
-            title: "Security Testing básico (OWASP)",
-            paragraphs: ["No necesitas ser pentester, pero TODO QA debe cubrir:"],
-            bullets: [
-              "Injection: ¿qué pasa con <script>alert('xss')</script> en un campo?",
-              "Broken Auth: ¿acceso sin login? ¿Tokens expiran?",
-              "IDOR: cambiar /api/users/123 a /124 ¿muestra datos de otro?",
-              "CSRF: ¿puedo forzar acciones sin consentimiento del usuario?"
-            ]
-          },
-          {
-            title: "Microservicios y Contract Testing",
-            paragraphs: ["En microservicios, un bug puede ser la interacción entre 3 servicios, no un error en uno solo."],
-            bullets: [
-              "Contract Testing (Pact): cada servicio define qué produce y consume. Si cambia, el contrato se rompe ANTES del deploy.",
-              "Chaos Engineering: inyectar fallos deliberados. ¿Qué pasa si pagos tiene 5s de latencia?",
-              "Distributed Tracing (Jaeger, Zipkin): seguir un request a través de múltiples servicios."
-            ]
-          }
-        ],
-        senior: "En Netflix, Chaos Monkey apaga servidores aleatoriamente en producción. No por irresponsabilidad — porque la resiliencia no se asume, se prueba.",
-        exercise: {
-          title: "Plan de Testing para Microservicios",
-          scenario: "Plataforma ride-sharing (tipo Uber). Servicios: User, Ride, Payment, Notification, Pricing. Pricing Service actualizado con surge pricing.",
-          task: "El cambio solo fue en Pricing pero afecta Ride y Payment.\n\n1. Tests por servicio\n2. Contract tests entre servicios\n3. Escenario de chaos engineering\n4. Cómo verificar consistencia de precio entre UI, cobro y recibo",
-          solution: [
-            "1. Pricing: unit tests de lógica nueva. Ride: regression de matching + nuevo schema de precios. Payment: regression de cobros.",
-            "2. Contracts: Pricing↔Ride (schema tarifa), Pricing↔Payment (monto), Ride↔Notification (datos viaje).",
-            "3. Chaos: Pricing con 10s de latencia. ¿Ride muestra precio? ¿Timeout? ¿Fallback a tarifa base?",
-            "4. Tracing E2E: precio mostrado = precio cobrado = precio en recibo. Con surge activo e inactivo."
-          ]
-        }
-      }
-    ],
-    quiz: [
-      { q: "¿Qué métrica de latencia importa más?", o: ["p50", "p95", "p99", "Promedio"], a: 2 },
-      { q: "IDOR permite:", o: ["Inyectar SQL", "Acceder a datos de otro usuario cambiando ID", "Ejecutar XSS", "Suplantar sesiones"], a: 1 },
-      { q: "Contract Testing verifica:", o: ["Que cada servicio es rápido", "Que respetan el formato de datos acordado", "Que hay réplicas suficientes", "Que el deploy fue exitoso"], a: 1 },
-    ]
-  },
-  {
-    id: "m7", title: "Metodologías Ágiles para QA",
-    desc: "Scrum aplicado al testing, ceremonias, Definition of Done, y anti-patrones que destruyen la calidad.",
-    lessons: [
-      {
-        id: "m7l1", title: "Scrum Aplicado al Testing",
-        intro: "Scrum no es teoría. Es cómo trabajan los equipos que entregan software cada 2 semanas. Tu participación define si la calidad es parte del proceso o un afterthought.",
-        sections: [
-          {
-            title: "El sprint para un tester",
-            paragraphs: ["Sprint = 2 semanas. El tester NO espera a que development termine."],
-            bullets: [
-              "Mientras devs implementan Story A, tú testeas Story B (ya completada)",
-              "Y preparas los test cases de Story C (siguiente en la cola)",
-              "Velocidad del equipo = stories que pasan DONE (incluido testing), no stories \"completadas\" por devs"
-            ]
-          },
-          {
-            title: "Ceremonias y tu rol real",
-            bullets: [
-              "Planning: estimas esfuerzo de testing, cuestionas stories ambiguas",
-              "Daily: reportas bloqueos, avance, bugs encontrados — en 15 segundos, no 5 minutos",
-              "Review: demuestras la calidad, no solo el feature. \"Testeamos X escenarios, encontramos Y bugs, Z resueltos\"",
-              "Retro: propones mejoras al proceso de calidad, no solo quejas"
-            ]
-          },
-          {
-            title: "Definition of Done",
-            paragraphs: ["Una story NO está Done hasta que:"],
-            bullets: [
-              "Code complete + code reviewed",
-              "Tests unitarios pasan",
-              "Testing funcional completado",
-              "Bugs críticos y altos resueltos",
-              "Regression no roto",
-              "Documentación actualizada"
-            ],
-            highlight: "Si tu equipo marca stories como Done antes del testing, tienen un problema sistémico que debes escalar."
-          }
-        ],
-        senior: "El tester que más valor agrega en Agile no es el que encuentra más bugs — es el que previene más bugs en planning. Una pregunta en refinement ahorra días de desarrollo.",
-        exercise: {
-          title: "Simulación de Sprint",
-          scenario: "Sprint 2 semanas. 3 devs, 1 tester (tú), 5 stories comprometidas.",
-          task: "Día 3: Story 1 en code review, Story 2 en desarrollo.\nDía 5: Story 1 tiene 2 bugs (1 High, 1 Med). Story 2 llega a testing.\nDía 8: Bug High sigue abierto. Stories 3-4 llegan simultáneamente. Story 5 atrasada.\nDía 9: PM pregunta \"¿entregamos las 5?\"\n\nPara cada día: qué haces y qué comunicas.",
-          solution: [
-            "Día 3: Preparo tests de Story 2. Reviso specs de Stories 3-5 (shift-left). Daily: \"Story 1 pendiente, preparando Stories 2-5.\"",
-            "Día 5: Testeo Story 2, documento bugs Story 1. Daily: \"Story 1 bloqueada por Bug-High. Risk flag: si no se arregla mañana, no sale.\"",
-            "Día 8: Escalo Bug-High al Scrum Master. Testeo Stories 3-4 en happy paths críticos. Flag Story 5 como riesgo.",
-            "Día 9: \"Realísticamente 3-4 stories. Story 5 no completará testing. Recomiendo moverla al próximo sprint.\""
-          ]
-        }
-      },
-      {
-        id: "m7l2", title: "Anti-patrones del QA en Agile",
-        intro: "Conocer los anti-patrones es tan importante como las buenas prácticas. Estos errores destruyen la efectividad del tester.",
-        sections: [
-          {
-            title: "QA Pasivo",
-            paragraphs: ["Solo ejecuta tests asignados. No cuestiona requisitos, no participa en planning, no propone mejoras. Es ejecutor, no ingeniero."],
-            highlight: "En Big Tech, este perfil no sobrevive. Tu voz en refinement vale tanto como la del developer."
-          },
-          {
-            title: "QA Tardío",
-            paragraphs: ["El equipo termina el jueves y \"pasa a QA\" el viernes. 1 día para 5 stories = testing superficial = bugs en producción."],
-            bullets: ["Solución: testing paralelo al desarrollo. Mientras Story A se desarrolla, preparas tests. Cuando llega, ejecutas de inmediato."]
-          },
-          {
-            title: "QA Policía",
-            paragraphs: ["Bloquea todo, rechaza stories por bugs cosméticos, crea fricción constante. El equipo lo ve como obstáculo."],
-            bullets: ["Solución: criterio. No todo bug bloquea. Clasifica por severidad, negocia, acepta riesgos calculados."]
-          },
-          {
-            title: "QA Aislado",
-            paragraphs: ["Trabaja solo, no hace pair testing, no comparte strategy. Resultado: duplicación de esfuerzo, gaps de cobertura."],
-            bullets: ["Solución: pair testing, compartir test strategy en planning, feedback loops cortos con developers."]
-          }
-        ],
-        senior: "El mejor indicador de un buen tester: los developers dicen \"Quiero que revises mi story antes de codear.\" Cuando te buscan proactivamente, estás haciendo tu trabajo bien.",
-        exercise: {
-          title: "Identifica los Anti-patrones",
-          scenario: "Lee estas situaciones y determina el anti-patrón + corrección.",
-          task: "1. En planning, el tester no dice nada. Después se queja de stories mal definidas.\n2. Rechaza release por typo en tooltip.\n3. Último día: 4 stories llegan a testing simultáneamente.\n4. Nunca habla con devs sobre su approach de testing.\n5. Le piden estimar testing y dice \"no sé, depende\".",
-          solution: [
-            "1. QA Pasivo — Debería cuestionar en planning, no después.",
-            "2. QA Policía — Typo en tooltip = Low/P3, no bloquea release.",
-            "3. QA Tardío (sistémico) — Testing debe ser paralelo, no secuencial.",
-            "4. QA Aislado — Pair testing evitaría gaps.",
-            "5. QA Pasivo — Debería estimar basándose en complejidad y riesgo."
-          ]
-        }
-      }
-    ],
-    quiz: [
-      { q: "Una story está \"Done\" cuando:", o: ["Dev termina de codear", "Code review pasa", "Testing completado y bugs críticos resueltos", "PM aprueba"], a: 2 },
-      { q: "El tester agrega MÁS valor en:", o: ["Ejecución de tests", "Refinement y planning (shift-left)", "Reporte de bugs", "Retrospectiva"], a: 1 },
-      { q: "QA Tardío significa:", o: ["Tester llega tarde al daily", "Testing al final del sprint sin tiempo", "Tester nuevo", "Bugs post-release"], a: 1 },
-      { q: "Bloquear release por bug cosmético es:", o: ["Tester riguroso", "QA Policía — falta criterio", "Estándar Big Tech", "Correcto en empresas exigentes"], a: 1 },
-    ]
-  },
-  {
-    id: "m8", title: "Mentalidad y Soft Skills",
-    desc: "Cómo piensa un tester de elite, comunicación efectiva, decisiones bajo incertidumbre, y entrevistas Big Tech.",
-    lessons: [
-      {
-        id: "m8l1", title: "Mentalidad de un Tester de Elite",
-        intro: "La diferencia entre un tester y un gran tester no es técnica. Es mentalidad. Los mejores piensan diferente antes de abrir una sola herramienta.",
-        sections: [
-          {
-            title: "Mentalidad destructiva constructiva",
-            paragraphs: ["Tu trabajo no es confirmar que funciona. Es encontrar cómo se rompe — para PROTEGER, no para destruir. Antes de testear:"],
-            bullets: [
-              "¿Cómo usaría esto un usuario distraído?",
-              "¿Cómo abusaría esto un usuario malicioso?",
-              "¿Qué pasa cuando el sistema está bajo presión?",
-              "¿Qué asumió el developer que \"nunca pasaría\"?"
-            ]
-          },
-          {
-            title: "Comunicación con developers",
-            paragraphs: ["La forma en que reportas un bug determina si se arregla rápido o genera conflicto."],
-            bullets: [
-              "NUNCA: \"Tu código tiene un bug.\"",
-              "SIEMPRE: \"Encontré comportamiento inesperado en flujo X. Al hacer Y, resultado es Z, pero según requisito debería ser W. ¿Puede ser intencional?\"",
-              "La diferencia: respeto + datos + pregunta abierta"
-            ]
-          },
-          {
-            title: "Ownership real",
-            highlight: "No digas \"yo reporté el bug, no es mi problema si no lo arreglan.\" Tu responsabilidad es la calidad del PRODUCTO, no tu bug count."
-          }
-        ],
-        senior: "En Google, los ingenieros de testing más respetados dicen \"no sé, pero voy a investigar\" en vez de pretender que saben todo. Humildad intelectual + rigor técnico = marca de un senior.",
-        exercise: {
-          title: "Escenarios de Criterio",
-          scenario: "Tres situaciones reales que enfrentarás en tu carrera.",
-          task: "1. Jueves 6pm, release mañana. Bug: 2% de confirmaciones tardan 15s (no error funcional). PM quiere lanzar. Dev dice \"lo arreglo la semana que viene.\" ¿Qué haces?\n\n2. Dev senior rechaza tu bug: \"no es bug, es comportamiento esperado.\" Tú tienes evidencia de que contradice el requisito. Dev tiene 10 años, tú 3 meses.\n\n3. Te piden testear feature sin spec escrita. PM: \"ya lo discutimos verbalmente.\"",
-          solution: [
-            "1. Pido datos del 2%. Si son checkout (dinero), 15s puede causar doble click/cobro. Recomiendo: lanzar CON monitoring y alertas si latencia >10s. Documentar riesgo aceptado.",
-            "2. Voy al requisito escrito. \"Según REQ-123, el comportamiento esperado es X. ¿Cambió? Si sí, actualicemos documentación.\" Datos, no emociones.",
-            "3. \"Necesito criterios de aceptación escritos. Sin eso, no puedo garantizar cobertura.\" Si insisten, YO escribo los criterios y pido validación."
-          ]
-        }
-      },
-      {
-        id: "m8l2", title: "Entrevistas QA en Big Tech",
-        intro: "Las Big Tech no buscan ejecutores. Buscan ingenieros que piensen en sistemas, prioricen por riesgo y comuniquen con claridad.",
-        sections: [
-          {
-            title: "Lo que evalúan",
-            bullets: [
-              "Pensamiento sistemático: CÓMO piensas, no cuántos tests listas. Estructura: funcional → edge cases → integración → performance → seguridad → accesibilidad.",
-              "Priorización: \"Todos los tests posibles son X, los 5 críticos son estos PORQUE...\"",
-              "Conocimiento técnico: lees código, entiendes APIs, sabes SQL, puedes automatizar.",
-              "Comunicación clara: explicas problemas técnicos para que un PM entienda."
-            ]
-          },
-          {
-            title: "La pregunta del elevador",
-            paragraphs: ["\"¿Cómo testearías un elevador?\" — Categoriza:"],
-            bullets: [
-              "Funcional: cada piso accesible, puertas, indicador correcto",
-              "Edge cases: todos los pisos a la vez, cancelar, piso inválido",
-              "Concurrencia: llamadas simultáneas, algoritmo de scheduling",
-              "Seguridad: sensor obstrucción, freno emergencia, teléfono",
-              "Performance: tiempo espera, capacidad peso, carga máxima",
-              "Resiliencia: corte de energía, fallo de sensor",
-              "Accesibilidad: braille, voz, tiempo puerta suficiente"
-            ]
-          },
-          {
-            title: "El factor diferenciador",
-            highlight: "No es lo que sabes. Es cómo PIENSAS EN VOZ ALTA. Practica verbalizar tu proceso de razonamiento."
-          }
-        ],
-        senior: "Cuando no sepas algo en la entrevista: \"No tengo experiencia directa, pero mi approach sería...\" Demuestra honestidad + capacidad de resolver problemas nuevos.",
-        exercise: {
-          title: "Mock Interview",
-          scenario: "Responde como si estuvieras en entrevista FAANG.",
-          task: "1. \"¿Cómo testearías la barra de búsqueda de Google?\" (Organiza por categorías.)\n\n2. \"15 bugs: 3 P0, 5 P1, 7 P2. Solo pueden arreglar 8. ¿Cuáles?\"\n\n3. \"¿Diferencia entre buen tester y gran tester?\"",
-          solution: [
-            "1. Funcional: normal, vacía, especiales, muy larga. Autocompletado: velocidad, relevancia. Resultados: orden, paginación. i18n: RTL. Performance: <200ms. Seguridad: XSS. Accesibilidad: screen reader.",
-            "2. Los 3 P0 no negociables. De los 5 P1: evalúo usuarios afectados, workaround, regresión. Top 5 por impacto. 7 restantes al backlog priorizado.",
-            "3. Buen tester encuentra bugs. Gran tester los previene. Buen tester ejecuta tests. Gran tester diseña estrategias. Buen tester reporta. Gran tester mejora el proceso."
-          ]
-        }
-      }
-    ],
-    quiz: [
-      { q: "La mejor forma de comunicar un bug:", o: ["\"Tu código tiene un bug\"", "\"Comportamiento inesperado: al hacer X, ocurre Y en vez de Z. ¿Intencional?\"", "\"Login roto, arréglalo\"", "\"Te asigné el ticket\""], a: 1 },
-      { q: "Ownership real en QA:", o: ["Ejecutar todos los tests", "Si bug llega a prod es culpa del dev", "Tu responsabilidad es la calidad del PRODUCTO", "Arreglar bugs tú mismo"], a: 2 },
-      { q: "En entrevista cuando no sabes:", o: ["Inventar respuesta", "\"No tengo experiencia directa, pero mi approach sería...\"", "Cambiar el tema", "Decir que nunca preguntaron eso"], a: 1 },
-      { q: "Gran tester vs buen tester:", o: ["Más bugs", "Más automatización", "Previene bugs y mejora procesos", "Más certificaciones"], a: 2 },
-    ]
-  }
+/* ═══════════════════════════════════════════════════════════════
+   COURSE DATA — FULL DEPTH CONTENT (8 MODULES, ALL LESSONS)
+   ═══════════════════════════════════════════════════════════════ */
+const M=[
+{id:"m1",title:"Fundamentos del Testing",desc:"Qué es el testing, por qué existe, tipos de testing, STLC/SDLC y el rol real del tester en la industria.",
+lessons:[
+{id:"m1l1",title:"Qué es el Testing y por qué existe",
+intro:"El testing no es \"verificar que funcione\". Es una disciplina de ingeniería cuyo objetivo es reducir el riesgo de fallos en producción que impacten al negocio, a los usuarios o a la reputación de la empresa.",
+sections:[
+{title:"El costo exponencial de los bugs",paragraphs:["Un bug encontrado en requisitos cuesta x1. En desarrollo cuesta x10. En QA cuesta x100. En producción cuesta x1000. Esta progresión no es teórica — está respaldada por décadas de datos de la industria."],bullets:["Knight Capital perdió $440M en 45 minutos por un bug en su sistema de trading automatizado","Facebook expuso 50 millones de tokens de acceso por un error de autenticación en 2018","Therac-25: errores de software en máquinas de radioterapia causaron muertes por sobredosis de radiación","No son errores de \"malos desarrolladores\" — son fallos sistémicos donde el testing fue insuficiente o inexistente"]},
+{title:"Por qué los humanos producen bugs",paragraphs:["Los errores de software no son accidentes aleatorios. Son consecuencia de sesgos cognitivos predecibles que afectan a TODOS los desarrolladores:"],bullets:["Sesgo de confirmación: el developer prueba que SU código funciona, no que falle. Testea el happy path y asume que los edge cases \"no van a pasar\"","Efecto de anclaje: si algo funcionó ayer, asumimos que funciona hoy — sin verificar que un cambio en otro módulo no rompió la integración","Ceguera por familiaridad: después de ver el mismo código 100 veces, ya no ves los errores. Necesitas ojos frescos","Complejidad combinatoria: una app con 20 campos de 10 opciones tiene 10²⁰ combinaciones posibles. Nadie puede probar todo — necesitas ESTRATEGIA, no fuerza bruta"]},
+{title:"Tu verdadero trabajo como tester",paragraphs:["No buscas bugs. Buscas RIESGO. Tu trabajo es responder una pregunta fundamental:"],highlight:"¿Qué tan confiados estamos en que este software hace lo que debe, no hace lo que no debe, y sobrevive condiciones adversas?",paragraphs2:["Esa confianza se construye con evidencia: tests ejecutados, bugs encontrados, áreas cubiertas, riesgos mitigados. Tu entregable no es un reporte — es información para tomar decisiones."]}
+],
+senior:"En Big Tech, el QA no es un gate al final del proceso. Es un multiplicador de calidad que opera desde el diseño del requisito hasta el monitoreo en producción. Si esperas al código para empezar a testear, llegaste tarde. Los mejores testers encuentran el 30% de los defectos antes de que se escriba una sola línea de código.",
+exercise:{title:"Análisis de Riesgo Real",scenario:"Eres el QA Lead asignado al checkout de un e-commerce que procesa $2M diarios. El equipo quiere lanzar \"Compra con un click\" (similar a Amazon 1-Click).",task:"Identifica los 5 riesgos más críticos que testearías ANTES de producción. Para cada uno define:\n\n• Qué podría salir mal (el riesgo concreto)\n• Impacto al negocio (en dinero, usuarios o reputación)\n• Cómo lo testearías (approach técnico)\n\nNO pienses en \"casos de prueba\". Piensa en RIESGO.",solution:["Doble cobro por click múltiple — Impacto: chargebacks masivos, pérdida de confianza del usuario. Test: simular clicks rápidos (debounce), verificar idempotencia del endpoint de pago con requests concurrentes.","Race condition en inventario — Impacto: vender producto agotado, costo de compensación al cliente. Test: 100 usuarios simultáneos comprando el último ítem, verificar que solo 1 transacción se complete.","Método de pago expirado/inválido — Impacto: orden creada sin cobro real. Test: tarjetas expiradas, fondos insuficientes, tarjetas bloqueadas. Verificar que la orden NO se cree si el pago falla.","Dirección de envío incorrecta por defecto — Impacto: envíos a dirección equivocada, costo de re-envío ~$15-30 por paquete. Test: usuario con múltiples direcciones, dirección default eliminada, dirección incompleta.","Fallo parcial en el flujo (cobro sin orden o viceversa) — Impacto: pérdida financiera directa o producto enviado sin cobro. Test: simular timeout del servicio de inventario DESPUÉS del cobro, verificar mecanismo de compensación/rollback."]}},
+{id:"m1l2",title:"Tipos de Testing — Taxonomía Real",
+intro:"Cada tipo de testing existe por una razón específica. Si no sabes cuándo usar cada uno, desperdicias tiempo y recursos — o peor, dejas huecos de cobertura que los usuarios van a encontrar en producción.",
+sections:[
+{title:"Por nivel de ejecución",paragraphs:["Cada nivel verifica una capa diferente del sistema:"],bullets:["Unit Testing — Lo hace el developer. Verifica una función aislada. Si un tester está escribiendo unit tests, algo está mal en el proceso del equipo.","Integration Testing — Aquí empieza tu territorio. Verificas que los componentes hablan correctamente entre sí. Ejemplo real: el servicio de usuarios devuelve un JSON, el servicio de pedidos lo consume. ¿Qué pasa si el campo \"email\" viene null? ¿Si viene con formato inesperado?","E2E (End-to-End) Testing — El flujo completo como lo haría un usuario real. Desde login hasta checkout completado. Es el más costoso de mantener y el más frágil. Úsalo solo para happy paths críticos del negocio."]},
+{title:"Por propósito",paragraphs:["Diferentes momentos del ciclo requieren diferentes tipos:"],bullets:["Smoke Testing — \"¿La app enciende?\" Verificas que las funcionalidades críticas no están rotas. Debe tomar menos de 15 minutos. Si tu smoke suite tarda 2 horas, no es smoke testing — es regression mal etiquetado.","Regression Testing — Verificas que lo que ya funcionaba SIGUE funcionando después de un cambio. El 70% de bugs en producción son regresiones. No subestimes esto.","Sanity Testing — Subset enfocado de regression. \"Cambiamos el módulo de pagos, vamos a verificar pagos a profundidad.\" Más profundo que smoke, más enfocado que regression completo.","Exploratory Testing — NO es \"clickear sin plan\". Es testing con charter: \"En los próximos 30 minutos, voy a explorar el flujo de registro usando datos extremos en campos opcionales.\" Documentas hallazgos en tiempo real."]},
+{title:"La pirámide de testing",paragraphs:["La distribución ideal que usan los equipos de alto rendimiento en Big Tech:"],bullets:["70% unit tests — rápidos, aislados, baratos de mantener","20% integration tests — verifican contratos entre componentes y servicios","10% E2E tests — solo los happy paths más críticos del negocio"],highlight:"Si tu suite E2E tiene 500 tests y tu integration tiene 50, tu arquitectura de testing está invertida. Vas a sufrir con tests lentos, frágiles y costosos de mantener. Invierte la pirámide."}
+],
+senior:"Un tester que dice \"voy a hacer exploratory testing\" sin un charter definido no está haciendo exploratory testing — está clickeando sin dirección. Siempre define: qué área exploras, qué tipo de datos usas, cuánto tiempo dedicas, y qué documentas. La disciplina en exploratory testing es lo que lo hace poderoso.",
+exercise:{title:"Decide el Tipo de Testing",scenario:"Para cada escenario, decide qué tipo(s) de testing aplicarías y justifica por qué. No hay respuesta única correcta, pero hay respuestas INCORRECTAS.",task:"1. Se cambió el color de un botón de \"Comprar\" de azul a verde.\n2. Se migró la base de datos de MySQL a PostgreSQL sin cambiar la API.\n3. Se agregó un nuevo endpoint /api/v2/users que coexiste con /api/v1/users.\n4. Es viernes 4pm, hay un hotfix que corrige un bug crítico en producción.\n5. El PM dice \"quiero asegurarme de que el checkout funciona bien en general\".",solution:["Cambio de color — Visual regression test (screenshot comparison). NO necesitas regression funcional completo. Pero SÍ verifica que el click handler no se rompió al cambiar el componente.","Migración de DB — Integration testing EXTENSO. Cada query debe retornar los mismos resultados. Data integrity tests. Performance comparison entre ambos engines.","Nuevo endpoint v2 — Integration tests del nuevo endpoint. Regression del v1 (asegurar backward compatibility). Contract testing entre ambas versiones.","Hotfix viernes — Smoke testing SOLAMENTE del fix y del área afectada. NO es momento de regression completo. Deploy con monitoreo activo. Si el smoke pasa, lanzar.","\"Funciona bien\" — Esto NO es un requerimiento testeable. Tu respuesta correcta: \"¿Qué significa 'bien'? ¿Qué escenarios te preocupan? ¿Hubo algún cambio reciente?\" Cuestionar requerimientos ambiguos es tu TRABAJO."]}},
+{id:"m1l3",title:"STLC, SDLC y tu Rol Real",
+intro:"El error más común de un tester junior: esperar a que development termine para empezar a testear. En Big Tech, si esperas al código, llegaste tarde. Tu influencia comienza desde el primer refinement.",
+sections:[
+{title:"STLC — Las 6 fases del testing",paragraphs:["El Software Testing Lifecycle es tu framework de trabajo:"],bullets:["1. Análisis de Requisitos — Lees la spec/PRD/user story. Tu objetivo: encontrar ambigüedades, contradicciones y gaps ANTES de que se escriba código. Este es tu mayor multiplicador de valor.","2. Planificación — Defines: qué vas a testear, qué NO vas a testear (igualmente importante), qué herramientas necesitas, cuánto tiempo, criterios de entrada/salida.","3. Diseño de Casos de Prueba — Aplicas técnicas formales (EP, BVA, tablas de decisión) para derivar los casos. NO improvises.","4. Configuración del Ambiente — Datos de prueba, ambientes staging, mocks de servicios externos. Un tester que no puede configurar su ambiente es un tester permanentemente bloqueado.","5. Ejecución — Corres los tests. Documentas resultados. Reportas bugs con la precisión de un cirujano.","6. Cierre — Métricas, lecciones aprendidas, test summary report. ¿Qué bugs se escaparon? ¿Por qué? ¿Cómo prevenimos que se repita?"]},
+{title:"En la práctica Agile",paragraphs:["Todo esto ocurre dentro de un sprint de 2 semanas. El tester participa en refinement, estima esfuerzo de testing, hace shift-left (testing temprano) y shift-right (monitoreo en producción)."],highlight:"No eres un paso en el proceso. Eres un participante continuo. Tu influencia va desde el refinement de la story hasta el monitoreo post-deploy."},
+{title:"Tu influencia real en Big Tech",paragraphs:["En Google, los SDET (Software Development Engineer in Test) tienen la misma voz que los SWE (Software Engineers). Pueden bloquear un release si la calidad no cumple el estándar mínimo del equipo. Esa autoridad no se otorga por título — se gana demostrando CRITERIO consistente en tus decisiones."]}
+],
+senior:"Shift-left significa que tus preguntas en el refinement de una story evitan más bugs que tus tests en el sprint. Una sola pregunta sobre un edge case puede ahorrar 3 días de desarrollo y 2 bugs en producción. Los testers más valiosos que he conocido en 15 años son los que hacen las preguntas incómodas en la reunión de planning.",
+exercise:{title:"Shift-Left en Acción",scenario:"Te entregan esta user story:\n\n\"Como usuario, quiero poder resetear mi contraseña para poder acceder a mi cuenta cuando la olvide.\"\n\nCriterios de aceptación:\n• El usuario recibe un email con un link de reset\n• El link expira en 24 horas\n• La nueva contraseña debe cumplir las políticas de seguridad",task:"ANTES de que se escriba una línea de código, identifica al menos 8 preguntas o ambigüedades que deberías escalar al Product Manager o al equipo de desarrollo. Estas preguntas deben demostrar que piensas en edge cases, seguridad y experiencia de usuario.",solution:["¿Qué pasa si el usuario solicita múltiples resets? ¿Se invalidan los links anteriores o todos siguen activos?","\"Políticas de seguridad\" — ¿cuáles exactamente? ¿Longitud mínima? ¿Caracteres especiales obligatorios? ¿No repetir las últimas N contraseñas?","¿Hay rate limiting? ¿Cuántos intentos de reset por hora/día se permiten por usuario?","¿Qué mensaje mostramos si el email NO existe en el sistema? (\"Email no encontrado\" permite enumeración de usuarios — vulnerability de seguridad)","¿El link de reset es de un solo uso o puede usarse múltiples veces dentro de las 24h?","¿Qué pasa si el usuario cambia su email DESPUÉS de solicitar el reset?","¿Se debe cerrar sesión en todos los dispositivos después del cambio de contraseña?","¿Se envía una notificación de que la contraseña fue cambiada? (Para detección de compromiso de cuenta)","¿Proxies de enterprise que hacen prefetch de links — el prefetch invalida el token de reset?","¿Qué pasa si el usuario está en flujo de 2FA y solicita reset de contraseña?"]}}
+],
+quiz:[
+{q:"Un bug en requisitos cuesta x1. ¿Cuánto cuesta en producción?",o:["x10","x100","x1000","x50"],a:2},
+{q:"Distribución correcta de la pirámide de testing:",o:["70% E2E, 20% Integration, 10% Unit","70% Unit, 20% Integration, 10% E2E","33% cada uno","50% Integration, 30% Unit, 20% E2E"],a:1},
+{q:"Exploratory testing sin charter definido es:",o:["Testing creativo e innovador","Clickear sin dirección ni documentación","Testing ágil válido","Ad-hoc testing aceptable"],a:1},
+{q:"¿Qué es shift-left testing?",o:["Testear más rápido","Involucrar testing desde las fases más tempranas","Mover tests a la izquierda del dashboard","Automatizar antes de diseñar"],a:1},
+{q:"El PM dice \"que funcione bien\". Tu respuesta profesional:",o:["Testear todo exhaustivamente","Preguntar qué significa \"bien\", qué preocupa, qué cambió","Decir que no es tu responsabilidad definir eso","Ejecutar el smoke test estándar"],a:1},
+{q:"El 70% de bugs en producción son:",o:["Bugs nuevos de features recientes","Regresiones de código existente","Problemas de performance","Errores de UI/UX"],a:1},
+{q:"¿Cuándo empieza el trabajo del tester en Agile?",o:["Cuando development termina","En el refinement de la story","Cuando el PM asigna tareas","El día del deploy"],a:1}
+]},
+{id:"m2",title:"Diseño de Pruebas",desc:"Técnicas formales para derivar casos de prueba: partición de equivalencia, valores límite, tablas de decisión, state transition y trazabilidad RTM.",
+lessons:[
+{id:"m2l1",title:"Partición de Equivalencia y Valores Límite",
+intro:"Estas dos técnicas generan el mayor valor por esfuerzo invertido. Reducen miles de combinaciones posibles a un conjunto manejable, efectivo y con base técnica sólida.",
+sections:[
+{title:"Partición de Equivalencia (EP)",paragraphs:["Divide el dominio de entrada en clases donde TODOS los valores de la clase se comportan igual. Testeas UN valor representativo por clase."],bullets:["Ejemplo — Campo \"edad\" para seguro de auto:","Clase inválida: < 18 (no puede contratar seguro)","Clase válida 1: 18-25 (tarifa joven, más cara)","Clase válida 2: 26-65 (tarifa estándar)","Clase válida 3: 66-99 (tarifa senior, más cara)","Clase inválida: > 99 (no asegurable)","Clases inválidas adicionales: no numérico, negativo, decimal, vacío","Con 7-8 tests cubres un dominio de miles de valores posibles"]},
+{title:"Análisis de Valores Límite (BVA)",paragraphs:["Los bugs viven en los bordes. SIEMPRE. Si un rango es 18-65, testeas los 6 valores críticos: 17, 18, 19, 64, 65, 66."],bullets:["Monto de transferencia bancaria (min $1.00, max $10,000.00):","$0.99 (justo debajo del mínimo), $1.00 (mínimo exacto), $1.01 (justo encima)","$9,999.99 (justo debajo del máximo), $10,000.00 (máximo exacto), $10,000.01 (justo encima)","También: $0.00, $0.01, -$0.01, $999,999.99"],highlight:"Testear $5,000 porque \"es un valor intermedio\" no encuentra NADA que no encuentre $1.01. Desperdicias ejecución sin ganar cobertura. En Big Tech, estas técnicas aplican a TODO: strings (longitud 0, 1, max, max+1), arrays (vacío, 1 elemento, lleno), timestamps (medianoche, cambio de zona horaria, año bisiesto)."}
+],
+senior:"Cuando un developer dice \"ya probé con datos normales y funciona\", tu pregunta inmediata es: \"¿Probaste en los límites?\" El 80% de los bugs de validación están en los bordes del rango, no en el medio. Eso es estadística, no opinión.",
+exercise:{title:"Diseña Tests con EP y BVA",scenario:"Sistema: Formulario de registro de un servicio de streaming (tipo Netflix/Spotify).",task:"Campos:\n• Username: 3-20 caracteres, alfanumérico, sin espacios\n• Contraseña: 8-64 caracteres, al menos 1 mayúscula, 1 número, 1 carácter especial\n• Fecha de nacimiento: debe ser mayor de 13 años\n• Código postal: 5 dígitos (formato US)\n\nPara CADA campo, define:\n1. Las clases de equivalencia (válidas e inválidas)\n2. Los valores límite exactos\n3. Mínimo 3 casos de prueba por campo\n\nBonus: identifica interacciones ENTRE campos que no se cubren testeando campos individuales.",solution:["Username — EP válida: \"user123\" (6 chars, alfanumérico). Inválidas: \"ab\" (2 chars, muy corto), \"user name\" (espacio), \"user@!\" (especiales), \"\" (vacío), 21 chars. BVA: 2 chars (inv), 3 chars (mínimo válido), 20 chars (máximo válido), 21 chars (inv).","Contraseña — EP válida: \"MyP@ss123\". Inválidas: \"mypass1!\" (sin mayúscula), \"MYPASS1!\" (sin minúscula), \"MyPasss!!\" (sin número), \"MyPass123\" (sin especial), \"My@1\" (7 chars). BVA: 7 chars (inv), 8 chars (mín), 64 chars (máx), 65 chars (inv).","Fecha nacimiento — BVA: exactamente 13 años HOY (límite exacto), 12 años 364 días (inválido). ¿Qué zona horaria se usa para calcular la edad? UTC vs local del usuario.","Interacciones entre campos (lo que separa a un senior): ¿Username = email prefix? ¿Se puede usar el username como parte de la contraseña? (Debería rechazarse por seguridad). Si la fecha indica exactamente 13 años HOY, ¿pasa o falla? ¿En qué timezone?"]}},
+{id:"m2l2",title:"Tablas de Decisión y State Transition",
+intro:"Cuando el comportamiento depende de COMBINACIONES de condiciones o de estados del sistema, necesitas técnicas que mapeen la complejidad de forma sistemática, no intuitiva.",
+sections:[
+{title:"Tablas de Decisión",paragraphs:["Mapean todas las combinaciones posibles de condiciones y su resultado esperado. Cada fila es un caso de prueba."],bullets:["Ejemplo real — Lógica de envío gratis en e-commerce:","Condiciones: ¿Es miembro Prime? ¿Monto > $50? ¿Es producto elegible?","2³ = 8 combinaciones posibles — cada una produce un resultado diferente","Prime + >$50 + Elegible = Envío gratis","Prime + >$50 + NO elegible = Envío $5.99","NO Prime + >$50 + Elegible = Envío gratis","NO Prime + <$50 + NO elegible = Envío estándar","Sin la tabla, te PIERDES combinaciones. Es matemática, no intuición."]},
+{title:"State Transition Testing",paragraphs:["Para sistemas con estados definidos. Mapeas: estados, transiciones válidas, transiciones INVÁLIDAS, y guardas (condiciones para la transición)."],bullets:["Ejemplo real — Estado de un pedido en e-commerce:","Pending → Paid → Processing → Shipped → Delivered (happy path)","Pending → Cancelled (por usuario antes de pagar)","Paid → Refunded (por usuario o por el sistema)","Shipped → Returned (por usuario después de recibir)","Lo CRÍTICO es testear transiciones INVÁLIDAS: ¿Qué pasa si intentas pasar de Delivered a Pending? ¿El sistema lo permite? Si sí, tienes un bug de integridad de estado."],highlight:"En Big Tech, los state machines son UBICUOS: estados de usuario (active/suspended/banned), estados de pago, estados de deployment, feature flags. Si no mapeas los estados formalmente, no puedes testear las transiciones inválidas que causan bugs críticos."}
+],
+senior:"Las tablas de decisión son tu herramienta más poderosa en refinements. Cuando el PM dice \"si el usuario es premium Y tiene más de $100, envío gratis\", tú preguntas: \"¿Y las otras 6 combinaciones? ¿Qué pasa con premium + menos de $100? ¿No-premium + más de $100?\" Eso es agregar valor real.",
+exercise:{title:"State Transition de Cuenta Financiera",scenario:"Diseña el diagrama de transición de estados para una cuenta de usuario en una plataforma financiera (tipo PayPal/Stripe).",task:"Estados posibles: Pending Verification, Active, Suspended, Locked, Closed, Banned\n\nReglas de negocio:\n• Cuenta nueva empieza en Pending Verification\n• Se activa cuando el usuario completa KYC\n• Se suspende temporalmente por actividad sospechosa (se puede reactivar)\n• Se bloquea (Locked) después de 5 intentos de login fallidos\n• Se cierra voluntariamente por el usuario\n• Se banea permanentemente por fraude confirmado\n\nDefine:\n1. Todas las transiciones válidas\n2. Al menos 5 transiciones inválidas que DEBES verificar que el sistema RECHAZA\n3. Qué pasa con el saldo de la cuenta en cada transición",solution:["Transiciones válidas: Pending→Active (KYC), Pending→Closed (cancela antes de verificar), Active→Suspended (sospecha), Active→Locked (5 intentos), Active→Closed (voluntario), Suspended→Active (cuenta legítima), Suspended→Banned (fraude confirmado), Locked→Active (reset password exitoso), Locked→Suspended (fraude detectado durante lockout).","Inválidas CRÍTICAS: Banned→Active (NUNCA, ban es permanente), Closed→Active (requiere nuevo registro), Pending→Suspended (no puedes suspender lo no activado), Locked→Closed (no permitas cierre durante investigación), Banned→Closed (ban overrides todo, no das opción de cierre limpio).","Saldo: Active→Suspended = congelado, no puede mover fondos. Active→Closed = debe ser $0 o transferido antes de cierre. Suspended→Banned = retenido para investigación legal. Locked→Active = intacto, sin cambios."]}},
+{id:"m2l3",title:"Casos de Prueba Profesionales y RTM",
+intro:"Un caso de prueba mal escrito es un caso que no puede ejecutar nadie más que tú. En Big Tech, tus casos deben ser autónomos, reproducibles y trazables a un requisito específico.",
+sections:[
+{title:"Anatomía de un caso de prueba de nivel profesional",bullets:["ID y título descriptivo: TC-LOGIN-001 — Login exitoso con credenciales válidas","Precondiciones: Usuario registrado con email \"test@company.com\" y password \"V@lidP4ss!\" en ambiente staging","Ambiente: Chrome 120+, staging environment, API v2.3","Pasos numerados, exactos, con datos específicos: 1) Navegar a /login 2) Ingresar email 3) Ingresar password 4) Click Sign In","Resultado esperado MEDIBLE: Redirect a /dashboard en <3 segundos. Cookie de sesión creada. Header muestra nombre del usuario.","Datos de prueba: User ID 12345, plan Premium","Prioridad: P0 (smoke test) — si este test falla, nada más importa","Trazabilidad: REQ-AUTH-001"],highlight:"Regla de oro: CUALQUIER persona de tu equipo debe poder ejecutar este caso y obtener el MISMO resultado. Si necesitan preguntarte algo para ejecutarlo, el caso está mal escrito."},
+{title:"Requirements Traceability Matrix (RTM)",paragraphs:["Es una tabla que mapea: Requisito → Caso(s) de prueba → Estado de ejecución → Bugs encontrados."],bullets:["Si un requisito no tiene casos de prueba mapeados = NO ESTÁ CUBIERTO por testing","Si un caso de prueba no mapea a ningún requisito = test huérfano que probablemente no necesitas","La RTM se mantiene viva en cada sprint — no es un documento que creas una vez y olvidas","En Jira, esto se implementa con links entre stories, test cases y bugs"]}
+],
+senior:"En Amazon, cada test case tiene un \"blast radius\" asociado: si este test falla, ¿a cuántos usuarios y cuánto revenue afecta? Un test de login tiene blast radius del 100% de usuarios y 100% del revenue. Un test de \"cambiar avatar\" tiene blast radius mínimo. Eso determina la prioridad del test y si bloquea el release.",
+exercise:{title:"Escribe Casos de Prueba Profesionales",scenario:"Feature: Carrito de compras con código de descuento en un e-commerce.",task:"Reglas de negocio:\n• Solo se puede aplicar UN código por orden\n• Código \"SAVE10\" da 10% de descuento\n• Código \"FLAT20\" da $20 de descuento si el total es > $100\n• Los códigos expiran en una fecha específica\n• Descuentos NO aplican a items en categoría \"Clearance\"\n• El envío NO se descuenta\n\nEscribe 8 casos de prueba profesionales (formato completo: precondiciones, pasos, resultado esperado, prioridad). Incluye al menos 2 casos negativos y 1 caso de interacción entre reglas.",solution:["TC-CART-001: Aplicar SAVE10 a orden de $200 (items regulares) → descuento $20, total $180. P1.","TC-CART-002: Aplicar FLAT20 a orden de $150 → descuento $20, total $130. P1.","TC-CART-003 (negativo): Aplicar FLAT20 a orden de $80 → rechazado, mensaje \"Mínimo $100 requerido\". P1.","TC-CART-004 (negativo): Aplicar código expirado → rechazado con mensaje \"Código expirado\". P2.","TC-CART-005: Intentar aplicar dos códigos → segundo rechazado con mensaje \"Solo un código por orden\". P2.","TC-CART-006 (interacción): SAVE10 en carrito mixto (items regulares $100 + clearance $50) → descuento SOLO sobre $100 = $10, total $140. P1.","TC-CART-007: Verificar que envío $9.99 NO se descuenta con SAVE10 → descuento solo sobre productos. P2.","TC-CART-008: Aplicar SAVE10, luego eliminar items hasta $0 → descuento recalculado a $0. P2."]}}
+],
+quiz:[
+{q:"En EP, ¿cuántos valores se testean por clase?",o:["Todos los posibles","Uno representativo","Tres: mínimo, medio, máximo","Depende del tamaño"],a:1},
+{q:"¿Dónde están la mayoría de bugs de validación?",o:["Valores intermedios del rango","En los bordes/límites del rango","En valores nulos","En valores negativos"],a:1},
+{q:"Una tabla de decisión con 4 condiciones binarias genera:",o:["4 combinaciones","8 combinaciones","16 combinaciones","32 combinaciones"],a:2},
+{q:"En State Transition, ¿qué es MÁS importante testear?",o:["Solo las transiciones válidas","Las transiciones INVÁLIDAS que el sistema debe rechazar","Solo estado inicial y final","Las transiciones más frecuentes"],a:1},
+{q:"\"Verificar que el login funciona correctamente\" como caso de prueba es:",o:["Aceptable para smoke","Insuficiente — falta datos, pasos y resultado esperado","Válido si el equipo conoce el sistema","Buen caso de alto nivel"],a:1},
+{q:"Si un requisito no tiene casos en la RTM:",o:["Es normal en Agile","No está cubierto por testing","Se cubre con exploratory","El dev lo cubrió con unit tests"],a:1}
+]},
+{id:"m3",title:"Bugs y Gestión de Calidad",desc:"Documentación profesional de bugs, severidad vs prioridad con criterio real, red flags, y decisiones de priorización bajo presión.",
+lessons:[
+{id:"m3l1",title:"Documentación de Bugs — El Arte de la Precisión",
+intro:"Un bug mal documentado es un bug que no se arregla. En Big Tech, tu reporte de bug es tu credibilidad profesional. Un developer debería poder reproducir tu bug en menos de 5 minutos leyendo tu reporte.",
+sections:[
+{title:"Estructura de un bug report profesional",bullets:["Título descriptivo y buscable. NO: \"Login no funciona\". SÍ: \"Login returns 500 error when email contains '+' character (e.g., user+tag@gmail.com)\"","Ambiente: OS, browser/version, API version, ambiente (staging/prod), fecha y hora exactas","Pasos para reproducir: EXACTOS, numerados, con DATOS ESPECÍFICOS. Sin ambigüedad.","Resultado actual: lo que PASÓ, con evidencia — screenshot, video, logs del servidor, HTTP response completa","Resultado esperado: lo que DEBERÍA pasar según spec, requisito o sentido común de UX","Frecuencia: siempre reproducible / intermitente (3 de 10 veces) / observado una sola vez","Impacto: quién se ve afectado, cuántos usuarios estimados, impacto monetario si aplica","Contexto adicional: ¿es regresión? ¿desde qué build? ¿workaround disponible?"]},
+{title:"Severidad vs Prioridad — La confusión más común",paragraphs:["Son dos dimensiones COMPLETAMENTE diferentes:"],bullets:["SEVERIDAD = impacto TÉCNICO del bug:","  Critical: sistema caído, pérdida de datos, breach de seguridad","  High: funcionalidad core rota sin workaround","  Medium: funcionalidad rota CON workaround disponible","  Low: cosmético, typo, UX menor","PRIORIDAD = urgencia de NEGOCIO para arreglarlo:","  P0: Fix ahora. Deploy hotfix. Despierta al on-call.","  P1: Fix este sprint. No puede esperar más.","  P2: Fix próximo sprint.","  P3: Backlog. Se arregla cuando haya capacidad."],highlight:"Un typo en el nombre del CEO en la landing page es severidad LOW pero prioridad P0. Un crash en un flujo que usa el 0.1% de usuarios es severidad CRITICAL pero puede ser prioridad P2. El tester asigna severidad. El PO/PM asigna prioridad. Si mezclas ambos conceptos, pierdes poder de comunicación."}
+],
+senior:"Un bug report excelente incluye una hipótesis: \"Posiblemente el endpoint no sanitiza el carácter '+' en el email antes de usarlo en la query SQL.\" Esto acelera enormemente el fix y demuestra que entiendes el sistema, no solo la superficie visible. Los developers respetan a testers que incluyen hipótesis técnicas.",
+exercise:{title:"Documenta Este Bug",scenario:"Estás testeando una app de delivery de comida. Hiciste un pedido de $45.50, aplicaste el cupón \"WELCOME50\" (50% descuento para nuevos usuarios). El descuento se aplicó correctamente ($22.75). Pagaste con tarjeta. El pedido se confirmó. El email de confirmación muestra $22.75 (correcto). Tu statement de tarjeta muestra cobro de $22.75 (correcto).",task:"PERO: en tu historial de pedidos dentro de la app, el monto muestra $45.50 (sin descuento).\n\nEscribe el bug report COMPLETO con formato profesional. Define severidad y prioridad con justificación detallada.",solution:["Título: Order history displays pre-discount amount ($45.50) instead of actual charged amount ($22.75) after applying WELCOME50 coupon","Severidad: Medium — No hay pérdida financiera real (el cobro ES correcto), pero genera confusión significativa y potenciales tickets de soporte masivos.","Prioridad: P1 — Los nuevos usuarios (target exacto del cupón WELCOME50) verán discrepancia entre lo cobrado y lo mostrado. Genera desconfianza inmediata. Impacta retention de nuevos usuarios. Probable aumento de llamadas a soporte.","Nota clave: el email de confirmación SÍ muestra el monto correcto. La inconsistencia es SOLO en el historial de la app.","Hipótesis: el order history probablemente lee el campo subtotal (pre-descuento) en lugar del campo total o final_amount (post-descuento) de la tabla de transacciones."]}},
+{id:"m3l2",title:"Criterio Real para Clasificar Bugs",
+intro:"La diferencia entre un tester junior y uno senior no es encontrar más bugs — es saber clasificarlos correctamente y comunicar su impacto real al equipo para que tomen la decisión correcta.",
+sections:[
+{title:"Red flags: bugs que SIEMPRE son escalación inmediata",bullets:["Cualquier bug que involucre dinero — cobro incorrecto, doble cobro, cobro sin servicio","Exposición de datos de otro usuario — IDOR, data leaks, permisos incorrectos","Bypass de autenticación o autorización — acceso sin login, escalación de privilegios","Pérdida de datos irrecuperable — DELETE sin confirmación, corrupción de datos","Bloqueo del flujo principal para más del 5% de usuarios — el negocio se detiene"],highlight:"Si encuentras CUALQUIERA de estos, no esperes al próximo standup. No esperes a documentar el bug completo. Escala INMEDIATAMENTE al tech lead y al product owner."},
+{title:"Framework de priorización de un senior",paragraphs:["El tester junior lista bugs por severidad. El tester senior cruza severidad con múltiples factores:"],bullets:["¿Cuántos usuarios están afectados? (0.1% vs 50% es una diferencia enorme)","¿Existe workaround disponible? (si sí, baja la urgencia)","¿Es regresión? (antes funcionaba — esto implica que un cambio reciente lo rompió)","¿Puede empeorar con el tiempo? (memory leaks, data corruption progresiva)","¿Es one-way door (irreversible) o two-way door (se puede revertir con hotfix)?"]},
+{title:"No todo bug merece un fix",paragraphs:["Tu trabajo no es pedir que se arreglen todos los bugs. Es dar la INFORMACIÓN correcta para que el equipo tome la DECISIÓN correcta. A veces la respuesta correcta es \"aceptamos el riesgo\" — y eso está bien si la decisión es informada y documentada."]}
+],
+senior:"En Amazon hay un concepto fundamental: \"one-way door\" vs \"two-way door\". Un bug que causa pérdida de datos es one-way (irreversible) — SIEMPRE es P0, sin excepción. Un bug visual que se puede hotfixear en 30 minutos es two-way — puede esperar al próximo sprint si hay cosas más urgentes.",
+exercise:{title:"Clasifica y Prioriza",scenario:"Eres el QA Lead. Tienes 6 bugs reportados y el sprint tiene capacidad para arreglar solo 3. Tu recomendación determina cuáles se arreglan.",task:"1. La app se crashea cuando el usuario toma una foto de perfil en iPhone 12 con iOS 17.\n2. El botón \"Cancelar suscripción\" no funciona — el usuario debe llamar a soporte.\n3. Los emails transaccionales se envían con 30 minutos de delay.\n4. El dashboard de admin muestra métricas del día anterior en vez de hoy.\n5. Un memory leak causa que la app web se ponga lenta después de 4 horas de uso continuo.\n6. La búsqueda devuelve resultados en orden incorrecto con filtro de precio.\n\nClasifica cada uno con severidad y prioridad. Elige los 3 que arreglas ESTE sprint. Justifica cada decisión.",solution:["PRIORIZO: #2 (P0 — posible violación legal en UE/California donde cancelar suscripción debe ser tan fácil como suscribirse. Riesgo de multas regulatorias. Usuarios atrapados = churn invisible + reviews negativas).","#1 (P1 — crash es siempre visible, iPhone 12 es dispositivo muy común, afecta experiencia directa y causa 1-star reviews en App Store).","#3 (P1 — emails transaccionales tardíos causan ansiedad post-compra, generan tickets de soporte masivos, y pueden hacer que usuarios piensen que su pago no se procesó).","Para PRÓXIMO sprint: #5 (memory leak afecta uso prolongado — minoría de usuarios), #4 (admin-only — impacta decisiones internas pero no usuarios finales), #6 (molesto pero no bloquea la compra — workaround: no usar filtro).","Clave: #2 podría escalar a P0 legal dependiendo de la jurisdicción. Verificar con legal antes de clasificar como P1."]}}
+],
+quiz:[
+{q:"Un typo en el nombre del CEO en la landing page tiene:",o:["Severidad HIGH, Prioridad P0","Severidad LOW, Prioridad P0","Severidad LOW, Prioridad P3","Severidad MEDIUM, Prioridad P1"],a:1},
+{q:"¿Quién asigna la prioridad de un bug?",o:["El tester","El developer","El Product Owner / PM","El QA Lead"],a:2},
+{q:"Un endpoint que devuelve datos de OTRO usuario al cambiar el ID en la URL es:",o:["Severidad Medium, posible P2","Severidad Critical, P0 inmediato","Severidad Low si nadie lo reportó","Severidad High, P1"],a:1},
+{q:"Un crash que afecta al 0.1% de usuarios es:",o:["Severidad Low porque afecta pocos","Severidad Critical — un crash siempre es critical","Severidad Medium con workaround","No es un bug, es un edge case"],a:1},
+{q:"La hipótesis en un bug report sirve para:",o:["Demostrar que sabes programar","Acelerar el fix y mostrar comprensión del sistema","Asignar al developer correcto","Cubrir responsabilidad legal"],a:1}
+]},
+{id:"m4",title:"Herramientas del Tester",desc:"Jira con JQL avanzado, Postman para API testing, SQL para investigación de datos, y Git básico para testers.",
+lessons:[
+{id:"m4l1",title:"Jira, Postman, SQL y Git",
+intro:"No basta con saber que estas herramientas existen. Necesitas dominar los patrones específicos que te hacen productivo en el día a día como tester profesional.",
+sections:[
+{title:"Jira avanzado para QA",paragraphs:["No solo creas tickets. Un tester senior usa Jira como centro de inteligencia de calidad:"],bullets:["Dashboards de calidad: bugs abiertos por severidad, bugs por módulo, velocity de fix, aging de bugs críticos","JQL avanzado: project = CHECKOUT AND type = Bug AND severity = Critical AND status != Closed AND created >= -30d","Workflows de bug lifecycle: Open → In Progress → In Review → Verified → Closed (con validación del tester antes de cerrar)","Trazabilidad completa: linkear bugs a test cases y a stories para tener cobertura visible","Filtros guardados para tu daily: \"Mis bugs abiertos\", \"Bugs críticos sin asignar\", \"Bugs en verificación\""]},
+{title:"API Testing con Postman",paragraphs:["En el mundo moderno, el 80% del testing crítico es a nivel de API. La UI es solo la punta del iceberg."],bullets:["Construir requests GET/POST/PUT/DELETE con headers, body, y autenticación","Variables de ambiente (staging vs prod) para cambiar contexto en un click","Tests automatizados en la pestaña Tests: pm.test(\"Status is 200\", () => pm.response.to.have.status(200));","Collections con flujos completos: register → login → create order → verify order → cancel order","Pre-request scripts para generar datos dinámicos: timestamps, UUIDs, tokens","Newman para correr collections desde CI/CD"]},
+{title:"SQL para investigación de bugs",paragraphs:["Queries que encuentran lo que la UI NUNCA te mostraría:"],bullets:["SELECT * FROM orders WHERE user_id = 123 AND status = 'pending';","SELECT COUNT(*) FROM users WHERE created_at > '2024-01-01' GROUP BY plan_type;","SELECT o.id, u.email FROM orders o JOIN users u ON o.user_id = u.id WHERE o.total != o.subtotal - o.discount;","La última query es ORO: encuentra inconsistencias de datos que la UI no puede mostrar","INNER JOIN para datos que existen en ambas tablas, LEFT JOIN para encontrar órdenes sin pago (posible bug)"]},
+{title:"Git básico para testers",paragraphs:["No necesitas ser un Git wizard. Necesitas el mínimo viable:"],bullets:["clone: obtener el repositorio","pull: actualizar tu copia local","log: ver historial de commits recientes","diff: ver qué cambió en el último commit para enfocar regression testing","branch/checkout: cambiar entre versiones para comparar comportamiento"],highlight:"Con git diff ves exactamente qué archivos y funciones cambiaron. Eso te dice dónde enfocar tu regression testing en vez de testear todo a ciegas."}
+],
+senior:"Un tester que solo usa la UI para verificar bugs es un tester a medias. El 50% de los bugs más costosos están en la capa de datos y solo los encuentras consultando la base de datos directamente. Aprende SQL — es tu superpoder silencioso.",
+exercise:{title:"Investigación con SQL",scenario:"Tienes acceso a estas tablas:\n• users (id, email, plan_type, created_at, last_login)\n• orders (id, user_id, total, discount, final_amount, status, created_at)\n• payments (id, order_id, amount, payment_method, status, processed_at)",task:"Te reportan: \"Algunos usuarios Premium dicen que no recibieron su descuento del 15%.\"\n\nEscribe las queries SQL que usarías para investigar:\n1. Encontrar órdenes de usuarios Premium donde el descuento NO es 15% del total\n2. Verificar si el monto cobrado (payments) coincide con el final_amount de la orden\n3. Identificar desde cuándo empezó el problema\n\nBonus: ¿Qué tipo de JOIN usarías y por qué?",solution:["1. SELECT o.id, u.email, u.plan_type, o.total, o.discount, ROUND(o.total * 0.15, 2) AS expected_discount FROM orders o JOIN users u ON o.user_id = u.id WHERE u.plan_type = 'premium' AND o.discount != ROUND(o.total * 0.15, 2) AND o.created_at > '2024-01-01' ORDER BY o.created_at DESC;","2. SELECT o.id AS order_id, o.final_amount, p.amount AS paid_amount, (o.final_amount - p.amount) AS discrepancy FROM orders o JOIN payments p ON p.order_id = o.id WHERE o.final_amount != p.amount AND p.status = 'completed';","3. SELECT MIN(o.created_at) AS first_occurrence FROM orders o JOIN users u ON o.user_id = u.id WHERE u.plan_type = 'premium' AND o.discount != ROUND(o.total * 0.15, 2) AND o.discount > 0;","Bonus: Uso INNER JOIN porque solo me interesan registros que existan en ambas tablas. Si quisiera ver órdenes SIN pago (posible bug), usaría LEFT JOIN y filtraría WHERE p.id IS NULL."]}}
+],
+quiz:[
+{q:"¿Qué porcentaje del testing crítico moderno es a nivel de API?",o:["30%","50%","80%","95%"],a:2},
+{q:"JQL en Jira sirve para:",o:["Escribir tests automatizados","Hacer queries avanzadas de tickets y crear filtros","Conectar con la base de datos","Generar reportes de código"],a:1},
+{q:"¿Por qué un tester necesita SQL?",o:["Para crear tablas de la base de datos","Para verificar datos que la UI no muestra y encontrar inconsistencias","Para optimizar queries del backend","Solo si no hay developer disponible"],a:1},
+{q:"Git diff es útil para un tester porque:",o:["Permite escribir código más rápido","Muestra qué cambió para enfocar regression testing","Es requerido por Jira","Permite hacer merge de branches"],a:1}
+]},
+{id:"m5",title:"Automatización de Testing",desc:"Estrategia de automatización, cuándo automatizar y cuándo NO, Playwright en la práctica, y CI/CD para testers.",
+lessons:[
+{id:"m5l1",title:"Estrategia de Automatización",
+intro:"La automatización no es un objetivo — es una herramienta. El anti-patrón más costoso de la industria es automatizar todo sin estrategia. Más tests automatizados NO significa mejor calidad.",
+sections:[
+{title:"Cuándo SÍ automatizar",bullets:["Lo que ejecutas más de 3 veces, es estable, y el costo de mantenimiento es menor que la ejecución manual","Smoke tests que corren en cada build (verificación rápida de que no está todo roto)","Regression de flujos core: login, checkout, CRUD principal del negocio","Validaciones de API: contratos, schemas JSON, status codes, headers de seguridad","Data validation: queries SQL automatizadas contra la DB para verificar integridad","Tests de performance recurrentes con thresholds definidos"]},
+{title:"Cuándo NO automatizar",bullets:["Exploratory testing — por definición, no es automatizable. Necesita creatividad humana.","Tests que cambian cada sprint — alto costo de mantenimiento, bajo ROI","Tests de UX/usabilidad — necesitan juicio humano sobre experiencia de usuario","Features inestables o en desarrollo activo — vas a reescribir el test 5 veces","Validaciones one-time — si solo lo ejecutas una vez, no vale la inversión"]},
+{title:"El anti-patrón de los 2000 E2E tests",paragraphs:["Equipos que automatizan TODO terminan con un problema peor que no tener tests:"],bullets:["Suite que tarda 4 horas en correr — nadie espera los resultados","30% de los tests son flaky — fallan aleatoriamente sin ser bugs reales","Más tiempo manteniendo tests que testeando funcionalidad nueva","Nadie confía en los resultados — si 50 tests fallan, ¿cuáles son bugs reales?","Fatiga de alertas: el equipo ignora los fallos porque \"siempre falla algo\""],highlight:"Distribución correcta: 70% tests de API/integration (rápidos, estables, alto ROI), 20% tests de componente/servicio, 10% tests E2E (solo happy paths críticos del negocio). Si tu pirámide está invertida, arréglala antes de agregar más tests."}
+],
+senior:"En Meta, la regla es: si un test automatizado falla más de 2 veces sin ser un bug real (flaky), se desactiva automáticamente y se crea un ticket P2 para arreglarlo. Un test flaky es PEOR que no tener test — genera fatiga de alertas y hace que el equipo ignore fallos reales.",
+exercise:{title:"Decide Qué Automatizar",scenario:"Tu equipo tiene una app de gestión de proyectos (tipo Asana/Monday). Tienes capacidad para automatizar 20 tests esta semana.",task:"Candidatos:\n1. Login con email/password (flujo principal)\n2. Login con Google SSO\n3. Crear un proyecto nuevo\n4. Drag and drop de tareas entre columnas del board\n5. Invitar un usuario al workspace por email\n6. Filtrar tareas por fecha, asignado y prioridad\n7. Subir archivos adjuntos a una tarea (hasta 10MB)\n8. Notificaciones en tiempo real cuando te asignan una tarea\n9. Exportar proyecto a CSV\n10. Cambiar el theme de light a dark mode\n11. API: CRUD completo de tareas (/api/tasks)\n12. API: Permisos — verificar que un viewer no puede editar\n13. API: Rate limiting del endpoint de búsqueda\n14. Flujo completo E2E: crear proyecto → crear tarea → asignar → completar → archivar\n\nSelecciona tus tests priorizados y justifica. ¿Qué dejaste fuera y por qué?",solution:["TOP PRIORIDAD (automatizar): #1 (smoke, cada build), #11 (API CRUD = máximo ROI, estable, rápido), #12 (seguridad/permisos, crítico), #3 (flujo core del negocio), #14 (E2E happy path principal), #6 (regression frecuente, filtros cambian mucho), #13 (previene abuso, rate limiting es invisible al usuario).","PRIORIDAD MEDIA: #5 (flujo importante pero menos frecuente), #9 (validar que el export no se rompe).","NO AUTOMATIZAR: #4 (drag&drop es extremadamente frágil en automation, muy alto mantenimiento), #8 (real-time WebSocket testing es complejo y produce muchos flaky tests), #10 (bajo valor de negocio, no bloquea nada), #2 (SSO requiere mocks complejos del proveedor, testear manualmente).","Criterio clave: priorizamos API tests (#11, #12, #13) sobre E2E porque son 10x más estables, 100x más rápidos, y cubren la lógica de negocio real."]}},
+{id:"m5l2",title:"Playwright en la Práctica y CI/CD",
+intro:"Playwright es la herramienta moderna de referencia para automatización de browser testing. Soporta múltiples browsers, tiene auto-wait inteligente, y permite network interception para simular condiciones reales.",
+sections:[
+{title:"Estructura profesional de tests",paragraphs:["Un test automatizado profesional se distingue del amateur en estos detalles:"],bullets:["Usa data-testid como selector PRIMARIO. NUNCA selectores CSS frágiles como .btn-primary o div > span:nth-child(3)","Assertions explícitas y descriptivas: expect(page).toHaveURL('/dashboard') — no expect(url).toBeTruthy()","Cada test crea su propia data de prueba — no depender de datos que otro test creó","Tests completamente independientes — puedes ejecutar cualquiera en aislamiento","Nombres descriptivos: 'should show error when login with expired password' — no 'test login 3'"]},
+{title:"Buenas prácticas obligatorias",bullets:["Page Object Model: cuando cambia un selector, actualizas 1 archivo — no 47 tests. No es opcional, es arquitectura básica.","Screenshots y traces automáticos SOLO en fallo — no en cada test (llena el disco rápido)","Retry configurado a máximo 1 — si necesitas más retries, tu test es flaky y necesita arreglo","Reportes claros: qué test falló, en qué paso, con qué datos, screenshot del momento del fallo","Paralelización: Playwright ejecuta tests en paralelo por defecto — asegúrate de que tus tests lo soporten"]},
+{title:"CI/CD — Tu suite en el pipeline",paragraphs:["En Big Tech, los tests corren automáticamente en cada Pull Request. Si un test falla, el merge se bloquea. No hay excepciones."],bullets:["GitHub Actions / Jenkins / CircleCI: configuras tu suite para que corra en cada PR","Si un test falla, el PR no se puede mergear hasta que se arregle","Los tests deben completarse en menos de 10 minutos para no bloquear el flujo de desarrollo","Si tu suite tarda 40 minutos, necesitas paralelizar o reducir scope"],highlight:"El tester es responsable de que la suite sea CONFIABLE. Un test flaky que bloquea deploys cada tercer día es un problema de TU equipo, no del CI. Mantener la suite verde es parte de tu trabajo diario."}
+],
+senior:"Page Object Model no es opcional. Sin él, cuando cambia un selector actualizas 47 tests en 47 archivos. Con él, actualizas 1 línea en 1 archivo. Es la diferencia entre un framework que dura 3 años y uno que abandonas en 3 meses. Inviértele tiempo al principio.",
+exercise:{title:"Escribe Tests Automatizados",scenario:"Flujo de e-commerce: buscar producto, agregar al carrito, verificar total, proceder a checkout.",task:"Escribe código Playwright (o pseudocódigo claro) para testear:\n\n1. Buscar un producto por nombre\n2. Seleccionar el primer resultado\n3. Elegir cantidad: 2\n4. Agregar al carrito\n5. Ir al carrito\n6. Verificar que el item está con cantidad 2\n7. Verificar que el total es correcto (precio unitario × 2)\n8. Proceder al checkout\n9. Verificar que llegas a la página de checkout con el monto correcto\n\nIncluye: manejo de esperas, assertions significativas, y al menos un caso negativo (¿qué pasa si el producto está agotado?).",solution:["test('add to cart and verify total', async ({ page }) => {\n  await page.goto('/products');\n  await page.fill('[data-testid=\"search-input\"]', 'Wireless Mouse');\n  await page.click('[data-testid=\"search-btn\"]');\n  await page.click('[data-testid=\"product-card\"]:first-child');\n  await page.selectOption('[data-testid=\"quantity\"]', '2');\n  const priceText = await page.textContent('[data-testid=\"unit-price\"]');\n  const unitPrice = parseFloat(priceText.replace('$', ''));\n  await page.click('[data-testid=\"add-to-cart\"]');\n  await expect(page.locator('[data-testid=\"cart-badge\"]')).toHaveText('2');\n  await page.goto('/cart');\n  await expect(page.locator('[data-testid=\"item-qty\"]')).toHaveText('2');\n  const expectedTotal = (unitPrice * 2).toFixed(2);\n  await expect(page.locator('[data-testid=\"cart-total\"]')).toContainText(expectedTotal);\n  await page.click('[data-testid=\"checkout-btn\"]');\n  await expect(page).toHaveURL(/\\/checkout/);\n});","test('out of stock product shows disabled button', async ({ page }) => {\n  await page.goto('/products/oos-item-123');\n  await expect(page.locator('[data-testid=\"add-to-cart\"]')).toBeDisabled();\n  await expect(page.locator('[data-testid=\"stock-status\"]')).toContainText('Out of Stock');\n});"]}}
+],
+quiz:[
+{q:"¿Cuál es el anti-patrón más costoso en automatización?",o:["No automatizar nada","Automatizar TODO sin estrategia","Usar Selenium en vez de Playwright","No usar CI/CD"],a:1},
+{q:"¿Por qué un test flaky es peor que no tener test?",o:["Porque es más lento","Porque genera fatiga de alertas y nadie confía en los resultados","Porque consume más recursos","Porque es difícil de debuggear"],a:1},
+{q:"La distribución ideal de tests automatizados es:",o:["70% E2E, 20% Integration, 10% Unit","70% API/Integration, 20% Componente, 10% E2E","50% E2E, 50% API","No hay regla general"],a:1},
+{q:"¿Por qué data-testid sobre selectores CSS?",o:["Son más rápidos de ejecutar","Son estables ante cambios de diseño y estructura CSS","Son requeridos por Playwright","Mejoran la accesibilidad"],a:1},
+{q:"Page Object Model se usa para:",o:["Mejorar la performance de los tests","Centralizar selectores y reducir mantenimiento masivamente","Conectar con la base de datos","Generar reportes automáticos de ejecución"],a:1}
+]},
+{id:"m6",title:"Testing Avanzado",desc:"Performance testing (p99), seguridad básica (OWASP), microservicios, contract testing, chaos engineering y sistemas distribuidos.",
+lessons:[
+{id:"m6l1",title:"Performance, Seguridad y Microservicios",
+intro:"En sistemas distribuidos modernos, el testing funcional es solo el punto de partida. Los fallos más costosos en producción son de performance, seguridad e integración entre servicios — no bugs funcionales.",
+sections:[
+{title:"Performance Testing — No es solo \"¿es rápido?\"",paragraphs:["Hay 4 tipos diferentes de performance testing, cada uno responde una pregunta distinta:"],bullets:["Load Testing — ¿Soporta la carga esperada? (1000 usuarios simultáneos en hora pico)","Stress Testing — ¿Cuándo se rompe? (incrementar carga hasta que falle, encontrar el límite exacto)","Soak Testing — ¿Se degrada con el tiempo? (carga constante por 24h, buscar memory leaks)","Spike Testing — ¿Sobrevive picos repentinos? (de 100 a 10,000 usuarios en 2 minutos — Black Friday)"],paragraphs2:["Herramientas: k6 (recomendada, moderna), JMeter (enterprise), Gatling (Scala), Locust (Python). Métricas clave: response time (p50, p95, p99), throughput (RPS), error rate, resource utilization (CPU, RAM)."],highlight:"El p99 es lo que importa en Big Tech. Si tu p50 es 200ms pero tu p99 es 5 segundos, el 1% de tus usuarios tiene una experiencia terrible. Y si tienes 10 millones de usuarios, son 100,000 personas sufriendo. Google, Amazon y Netflix optimizan para p99, no para promedio."},
+{title:"Security Testing — Lo básico que TODO tester debe saber",paragraphs:["No necesitas ser pentester, pero hay 4 vulnerabilidades del OWASP Top 10 que CUALQUIER QA debe verificar:"],bullets:["1. Injection (SQL, XSS) — ¿Qué pasa si escribo <script>alert('xss')</script> en un campo de texto? ¿Se ejecuta? Si sí, tienes un XSS.","2. Broken Authentication — ¿Puedo acceder a endpoints protegidos sin token? ¿Los tokens de sesión expiran? ¿Se invalidan al hacer logout?","3. IDOR (Insecure Direct Object Reference) — Si cambio /api/users/123 a /api/users/124, ¿veo los datos de OTRO usuario? Este es el bug de seguridad más común y más fácil de encontrar.","4. CSRF — ¿Puedo crear una página maliciosa que haga que otro usuario ejecute acciones sin su consentimiento en tu app?"]},
+{title:"Testing en Microservicios",paragraphs:["El desafío: en un monolito, un bug está en UN lugar. En microservicios, un bug puede ser la INTERACCIÓN entre 3 servicios que individualmente funcionan perfecto."],bullets:["Contract Testing (Pact) — Cada servicio define un contrato de lo que produce y consume. Si un servicio cambia su respuesta, el contrato se rompe ANTES del deploy. No necesitas integration environment.","Chaos Engineering — Inyectar fallos DELIBERADAMENTE para validar resiliencia. ¿Qué pasa si el servicio de pagos tiene 5 segundos de latencia? ¿El servicio de órdenes maneja el timeout correctamente? ¿O se queda colgado?","Distributed Tracing — Herramientas como Jaeger o Zipkin para seguir un request individual a través de múltiples servicios. Indispensable para debuggear problemas de integración."]}
+],
+senior:"En Netflix, Chaos Monkey apaga servidores aleatoriamente en PRODUCCIÓN. No porque sean irresponsables — porque la resiliencia no se asume, se PRUEBA. Si tu sistema no sobrevive la pérdida de un nodo sin afectar usuarios, no está listo para producción. Punto.",
+exercise:{title:"Plan de Testing para Microservicios",scenario:"Plataforma de ride-sharing (tipo Uber). Microservicios: User Service, Ride Service, Payment Service, Notification Service, Pricing Service.\n\nEl Pricing Service acaba de ser actualizado para incluir \"surge pricing\" (precios dinámicos por demanda). El cambio solo fue en Pricing Service, pero afecta a Ride Service y Payment Service.",task:"Diseña un plan de testing completo:\n\n1. ¿Qué tipo de tests aplicarías a CADA servicio afectado?\n2. ¿Qué contract tests necesitas entre los servicios?\n3. Diseña UN escenario de chaos engineering para validar resiliencia\n4. ¿Cómo verificas que el precio es CONSISTENTE entre lo que ve el usuario, lo que cobra Payment, y lo que muestra el recibo?",solution:["1. Tests por servicio: Pricing Service — unit tests de la nueva lógica de surge, integration con datos históricos de demanda. Ride Service — regression de matching conductor-pasajero, verificar que consume correctamente el nuevo schema de precios. Payment Service — regression de cobros, verificar que procesa el nuevo formato de monto con surge.","2. Contract tests necesarios: Pricing↔Ride (schema de tarifa con campo surge_multiplier), Pricing↔Payment (monto exacto a cobrar incluyendo surge), Ride↔Notification (datos del viaje con precio correcto para el SMS/push al usuario).","3. Chaos Engineering: Pricing Service con 10 segundos de latencia. ¿Ride Service muestra precio al usuario o timeout? ¿Hay fallback a tarifa base? ¿Payment cobra sin haber confirmado el precio con Pricing? ¿El usuario queda bloqueado o puede cancelar?","4. Consistencia de precio: distributed tracing de un request completo. El precio que muestra la app al solicitar = el precio que Ride envía a Payment = el precio que Payment cobra = el precio en el recibo/email. Testear con surge activo (2.3x) e inactivo (1.0x). Verificar redondeo consistente en todos los servicios."]}}
+],
+quiz:[
+{q:"¿Qué métrica de latencia importa más en Big Tech?",o:["p50 (mediana)","p95","p99","Promedio"],a:2},
+{q:"IDOR (Insecure Direct Object Reference) permite:",o:["Inyectar código SQL en la base de datos","Acceder a datos de otro usuario cambiando un ID en la URL","Ejecutar JavaScript malicioso en el browser","Suplantar sesiones de otros usuarios"],a:1},
+{q:"Contract Testing en microservicios verifica:",o:["Que cada servicio es suficientemente rápido","Que los servicios respetan el formato de datos acordado entre ellos","Que hay suficientes réplicas de cada servicio","Que el deployment fue exitoso"],a:1},
+{q:"Chaos Engineering consiste en:",o:["Testear sin plan ni documentación","Inyectar fallos deliberados para validar resiliencia del sistema","Ejecutar tests aleatorios en producción","Dejar que los usuarios encuentren los bugs"],a:1}
+]},
+{id:"m7",title:"Metodologías Ágiles para QA",desc:"Scrum aplicado al testing real, ceremonias desde la perspectiva QA, Definition of Done, simulación de sprint, y anti-patrones que destruyen la calidad.",
+lessons:[
+{id:"m7l1",title:"Scrum Aplicado al Testing",
+intro:"Scrum no es un framework teórico. Es cómo trabajan los equipos que entregan software funcional cada 2 semanas. Como tester, tu participación activa define si la calidad es parte integral del proceso o un afterthought del último día.",
+sections:[
+{title:"El sprint para un tester",paragraphs:["Sprint = 2 semanas. El tester NO espera a que development termine para empezar a trabajar:"],bullets:["Mientras devs implementan Story A, tú testeas Story B (ya completada por otro dev)","Simultáneamente preparas los test cases de Story C (siguiente en la cola de desarrollo)","Tu trabajo es CONTINUO, no un bloque al final del sprint","Velocidad del equipo = stories que pasan DONE (incluido testing), NO stories que los devs \"completaron\""]},
+{title:"Ceremonias y tu rol real en cada una",bullets:["Sprint Planning: estimas esfuerzo de testing para cada story, cuestionas stories con criterios ambiguos, identificas dependencias de testing (datos, ambientes, accesos)","Daily Standup: reportas bloqueos, avance de testing, bugs encontrados — en 15 SEGUNDOS, no 5 minutos. \"Ayer terminé testing de Story 2, encontré 1 bug High. Hoy empiezo Story 3. Bloqueado: necesito acceso a staging para testear integración con pagos.\"","Sprint Review: demuestras la CALIDAD, no solo el feature. \"Testeamos 47 escenarios, encontramos 3 bugs, 2 resueltos, 1 aceptado como known issue con workaround documentado.\"","Retrospectiva: propones mejoras CONCRETAS al proceso de calidad. No \"deberíamos testear más\" (vago) sino \"propongo agregar smoke test automatizado al pipeline para reducir regresiones\" (accionable)."]},
+{title:"Definition of Done — No negociable",paragraphs:["Una story NO está \"Done\" hasta que se cumple TODO:"],bullets:["Code complete + code review aprobado por al menos 1 peer","Tests unitarios escritos y pasando (responsabilidad del developer)","Testing funcional completado por QA (smoke + regression del área afectada)","Bugs de severidad Critical y High resueltos y verificados","Regression suite automatizada pasando sin nuevos fallos","Documentación actualizada (API docs, changelog, etc.)"],highlight:"Si tu equipo marca stories como Done ANTES del testing, tienen un problema sistémico que debes escalar. \"Done\" sin testing es \"Deployed sin confianza\"."}
+],
+senior:"El tester que más valor agrega en Agile no es el que encuentra más bugs en la fase de ejecución — es el que previene más bugs en la fase de planning. Una sola pregunta sobre un edge case en refinement puede ahorrar 3 días de desarrollo y 2 bugs que nunca llegan a existir.",
+exercise:{title:"Simulación de Sprint Completo",scenario:"Sprint de 2 semanas. Tu equipo: 3 developers, 1 tester (tú), 5 user stories comprometidas.",task:"Día 3: Story 1 está en code review. Story 2 está en desarrollo. Stories 3-5 no han empezado.\nDía 5: Story 1 tiene 2 bugs (1 High, 1 Medium). Developer dice \"los arreglo mañana\". Story 2 llega a testing.\nDía 8: Bug High de Story 1 SIGUE abierto. Stories 3-4 llegan a testing simultáneamente. Story 5 está atrasada en desarrollo.\nDía 9: PM pregunta: \"¿Vamos a entregar las 5 stories?\"\n\nPara CADA día, describe exactamente qué haces y qué comunicas al equipo.",solution:["Día 3: Preparo test cases de Story 2 mientras espero Story 1. Reviso la spec de Stories 3-5 buscando ambigüedades (shift-left). Reporto en daily: \"Story 1 pendiente de code review, tengo tests preparados. Preparando testing para Stories 2-5.\"","Día 5: Ejecuto testing de Story 2 inmediatamente. Documento bugs de Story 1 con severidad clara y pasos exactos. En daily: \"Story 1 bloqueada por Bug-HIGH-123. Story 2 en testing. Risk flag: si el High no se arregla mañana, Story 1 no sale este sprint.\"","Día 8: Bug High ya es ESCALACIÓN — notifico al Scrum Master formalmente. Testeo Stories 3-4 en paralelo enfocándome en happy paths y critical paths primero. Story 5: flag como riesgo alto. En daily: \"Bug High de Story 1 lleva 3 días sin fix. Stories 3-4 en testing. Story 5 no llegará a testing antes del cierre.\"","Día 9: Respuesta al PM: \"Realísticamente entregaremos 3-4 stories. Story 1 depende del fix del High que lleva 3 días. Story 5 no completará testing a tiempo. Recomiendo: mover Story 5 al próximo sprint, priorizar el fix de Story 1, y concentrar esfuerzo de testing en Stories 2-4.\""]}},
+{id:"m7l2",title:"Anti-patrones del QA en Agile",
+intro:"Conocer los anti-patrones es tan importante como conocer las buenas prácticas. Estos son los errores que destruyen la efectividad del tester en un equipo Agile — y algunos son tan comunes que los equipos los normalizan.",
+sections:[
+{title:"QA Pasivo",paragraphs:["El tester que solo ejecuta tests que le asignan. No cuestiona requisitos en planning, no propone mejoras en retro, no sugiere qué automatizar. Es un ejecutor de tareas, no un ingeniero de calidad."],highlight:"En Big Tech, este perfil no sobrevive. Tu voz en refinement y planning vale tanto como la del developer. Si no la usas, sobras."},
+{title:"QA Tardío",paragraphs:["El equipo termina de desarrollar el jueves y \"pasa a QA\" el viernes. El tester tiene 1 día para testear 5 stories. Resultado predecible: testing superficial, bugs escapan a producción, el tester se frustra."],bullets:["Solución: testing PARALELO al desarrollo. Mientras Story A se desarrolla, preparas tests y revisas specs. Cuando llega, ejecutas inmediatamente. No hay \"fase de QA\" — hay testing continuo."]},
+{title:"QA Policía",paragraphs:["El tester que bloquea todo, rechaza stories por bugs cosméticos, crea fricción constante con el equipo. Los developers lo ven como obstáculo, no como aliado. El PM lo ve como fuente de delays."],bullets:["Solución: CRITERIO. No todo bug bloquea un release. Clasifica por severidad, negocia con el equipo, acepta riesgos calculados cuando es apropiado. Un typo en un tooltip no justifica bloquear un deploy."]},
+{title:"QA Aislado",paragraphs:["El tester que trabaja solo en su rincón. No hace pair testing con developers, no comparte su strategy de testing con el equipo, no pide feedback sobre sus test cases."],bullets:["Resultado: duplicación de esfuerzo (dev ya probó lo que tú estás probando), gaps de cobertura (nadie verificó la integración).","Solución: pair testing sessions con developers, compartir test strategy en planning, feedback loops cortos."]}
+],
+senior:"El mejor indicador de un buen tester en un equipo Agile no es su bug count ni su test coverage. Es si los developers dicen: \"Quiero que revises mi story ANTES de empezar a codear.\" Cuando el equipo de desarrollo te busca proactivamente para validar su approach, estás haciendo tu trabajo correctamente.",
+exercise:{title:"Identifica los Anti-patrones",scenario:"Lee estas 5 situaciones reales y determina qué anti-patrón representa cada una. Propón la corrección específica.",task:"1. En el sprint planning, el tester no dice nada. Dos días después se queja de que las stories estaban mal definidas y no se pueden testear.\n2. El tester rechaza un release porque un tooltip tiene un typo en una pantalla secundaria.\n3. El último día del sprint, el tester recibe 4 stories para testear simultáneamente. No le da tiempo y 2 pasan sin testing adecuado.\n4. El tester nunca habla con los developers sobre su approach de testing. Descubre que el developer ya había probado los mismos escenarios.\n5. Cuando le piden estimar esfuerzo de testing en planning, dice \"no sé, depende\" y no da más información.",solution:["1. QA Pasivo — Debería cuestionar activamente en planning, no quejarse después. Acción: preparar preguntas ANTES del planning revisando las stories.","2. QA Policía — Un typo en tooltip de pantalla secundaria es severidad Low, prioridad P3. NO bloquea release. Acción: reportar el bug, clasificarlo correctamente, y aprobar el release.","3. QA Tardío (problema SISTÉMICO del equipo) — Testing debe ser paralelo al desarrollo, no secuencial. Acción: escalar al Scrum Master, proponer en retro que las stories se entreguen a QA de forma escalonada.","4. QA Aislado — Pair testing y comunicar strategy de testing evitaría duplicación. Acción: compartir test plan con devs al inicio, hacer mini-sync antes de testear cada story.","5. QA Pasivo + falta de madurez técnica — Debería poder estimar basándose en complejidad de la story, riesgo, y número de escenarios. Acción: crear un framework simple de estimación (Story simple=2h, media=4h, compleja=8h) y refinarlo con el tiempo."]}}
+],
+quiz:[
+{q:"En Scrum, una story está \"Done\" cuando:",o:["El developer termina de codear","El code review pasa","Testing completado y bugs críticos resueltos","El PM aprueba en la review"],a:2},
+{q:"El tester agrega MÁS valor en:",o:["La ejecución de tests","El refinement y planning (shift-left)","El reporte de bugs post-ejecución","La retrospectiva"],a:1},
+{q:"QA Tardío significa:",o:["El tester llega tarde al daily standup","Testing se hace al final del sprint sin tiempo suficiente","El tester es nuevo en el equipo","Los bugs se reportan después del release"],a:1},
+{q:"Un tester que bloquea releases por bugs cosméticos es ejemplo de:",o:["Un tester riguroso y profesional","QA Policía — falta criterio de priorización","El estándar esperado en Big Tech","Correcto si la empresa tiene altos estándares de calidad"],a:1},
+{q:"El mejor indicador de un buen tester en Agile:",o:["Bug count alto cada sprint","Test coverage del 100%","Los developers lo buscan proactivamente para revisar su trabajo","El PM siempre está satisfecho con su output"],a:2}
+]},
+{id:"m8",title:"Mentalidad y Soft Skills",desc:"Cómo piensa un tester de elite, comunicación con developers, decisiones bajo incertidumbre, ownership real, y preparación para entrevistas en Big Tech.",
+lessons:[
+{id:"m8l1",title:"Mentalidad de un Tester de Elite",
+intro:"La diferencia entre un tester y un GRAN tester no es técnica. Es mentalidad. Los mejores testers del mundo piensan diferente antes de abrir una sola herramienta de testing.",
+sections:[
+{title:"Mentalidad destructiva constructiva",paragraphs:["Tu trabajo no es confirmar que funciona. Es encontrar cómo se rompe. Pero NO para destruir, sino para PROTEGER. Cada bug que encuentras antes de producción es un incidente que evitaste, un usuario que no se frustró, una pérdida que no ocurrió."],bullets:["Antes de testear cualquier feature, pregúntate:","¿Cómo usaría esto un usuario distraído que no lee instrucciones?","¿Cómo ABUSARÍA esto un usuario malicioso intentando explotar el sistema?","¿Qué pasa cuando el sistema está bajo presión (lento, sin memoria, sin red)?","¿Qué asumió el developer que \"nunca va a pasar\"? (spoiler: siempre pasa)","¿Qué pasa si dos usuarios hacen lo mismo al mismo tiempo?"]},
+{title:"Comunicación con developers",paragraphs:["La forma en que comunicas un bug determina si se arregla rápido o genera un conflicto innecesario:"],bullets:["NUNCA: \"Tu código tiene un bug\" — esto es personal, genera defensividad","NUNCA: \"El login está roto\" — esto es vago, no ayuda a nadie","SIEMPRE: \"Encontré un comportamiento inesperado en el flujo X. Cuando hago Y con datos Z, el resultado es W, pero según el requisito REQ-123 debería ser V. ¿Puede ser intencional?\"","La fórmula: respeto + datos específicos + referencia al requisito + pregunta abierta","Esto NO es ser pasivo — es ser profesional. Puedes ser firme Y respetuoso."]},
+{title:"Decisiones bajo incertidumbre",paragraphs:["No siempre vas a tener toda la información. A veces debes decidir \"¿es seguro lanzar?\" con el 70% de la información disponible."],bullets:["Framework de decisión: ¿Cuál es el PEOR escenario si lanzamos con este bug conocido?","¿Es reversible? (¿Podemos hacer rollback en 5 minutos?)","¿Tenemos monitoring para detectarlo rápido si empeora?","¿Cuántos usuarios se afectan en el peor caso?","¿El costo de NO lanzar (delay) es mayor que el riesgo de lanzar?"]},
+{title:"Ownership real",highlight:"No digas \"yo reporté el bug, no es mi problema si no lo arreglan.\" Tu responsabilidad es la calidad del PRODUCTO, no tu bug count personal. Si un bug crítico llega a producción, el tester también falló — en la priorización, en la comunicación, o en la escalación."}
+],
+senior:"En Google, los ingenieros de testing más respetados son los que dicen \"no sé, pero voy a investigar\" en vez de pretender que saben todo. La humildad intelectual combinada con rigor técnico es la marca de un verdadero senior. Nadie espera que lo sepas todo — esperan que puedas RESOLVER lo que no sabes.",
+exercise:{title:"Escenarios de Criterio Real",scenario:"Tres situaciones que ABSOLUTAMENTE vas a enfrentar en tu carrera. No hay respuesta perfecta, pero hay respuestas claramente malas.",task:"Escenario 1: Es jueves 6pm. El release es mañana viernes 8am. Encontraste un bug: en el 2% de los casos, la confirmación de compra tarda 15 segundos en vez de 2 segundos. No hay error funcional — el resultado es correcto, solo lento. El PM quiere lanzar. El developer dice \"lo arreglo la próxima semana.\" ¿Qué haces?\n\nEscenario 2: Un developer senior rechaza tu bug diciendo \"no es un bug, es el comportamiento esperado.\" Tú estás seguro de que contradice el requisito escrito. Pero el developer tiene 10 años en la empresa y tú llevas 3 meses. ¿Cómo manejas esto?\n\nEscenario 3: Te piden testear un feature pero NO hay especificación escrita. El PM dice \"ya lo discutimos verbalmente con los devs, ellos saben qué hacer.\" ¿Qué haces?\n\nPara CADA escenario: qué dices, a quién, y qué acción concreta tomas.",solution:["Escenario 1: Primero, pregunto: ¿ese 2% son usuarios del checkout? Si sí, 15 segundos es MUCHO — puede causar doble click y doble cobro. Recomiendo: lanzar CON monitoring activo del endpoint de confirmación y alertas si latencia > 10s. Documentar formalmente el riesgo aceptado. Si el PM acepta, adelante. Si el 2% son usuarios de una pantalla secundaria, el riesgo es menor — lanzar sin problema.","Escenario 2: Voy al requisito ESCRITO. No a mi opinión, no a mi memoria — al documento. \"Según REQ-123, párrafo 4, el comportamiento esperado es X. El sistema actualmente hace Y. ¿Cambió el requisito? Si sí, actualicemos la documentación para que el testing se alinee.\" Datos, no emociones. Si no hay requisito escrito, escalo al PM para que defina el comportamiento correcto.","Escenario 3: No testeo sin criterios claros. Mi respuesta: \"Necesito al menos: criterios de aceptación escritos, escenarios de uso principales, y condiciones de error. Sin eso, no puedo garantizar cobertura ni reportar defectos contra una baseline definida.\" Si el PM insiste en que no hay tiempo para documentar, YO escribo los criterios basándome en mi entendimiento y pido validación explícita antes de ejecutar."]}}  ,
+{id:"m8l2",title:"Entrevistas de QA en Big Tech",
+intro:"Las Big Tech no buscan ejecutores de test cases. Buscan ingenieros que piensen en sistemas, prioricen basándose en riesgo y datos, y comuniquen con la claridad de alguien que puede influenciar decisiones.",
+sections:[
+{title:"Lo que evalúan en la entrevista",bullets:["1. Pensamiento sistemático — No quieren una lista random de tests. Quieren ver CÓMO piensas. Estructura tu respuesta: funcional → edge cases → integración → performance → seguridad → accesibilidad.","2. Priorización basada en riesgo — \"Estos son todos los tests posibles, pero los 5 más críticos son estos, PORQUE afectan al mayor número de usuarios y al flujo de revenue principal.\"","3. Conocimiento técnico — Puedes leer código fuente, entiendes cómo funcionan APIs REST, sabes escribir queries SQL para investigar, puedes automatizar tests con un framework real.","4. Comunicación clara — Puedes explicar un problema técnico complejo de forma que un Product Manager sin background técnico lo entienda y tome una decisión informada."]},
+{title:"Pregunta clásica: \"¿Cómo testearías un elevador?\"",paragraphs:["Respuesta junior: \"Presionar botones, ver si se mueve.\" Esto demuestra cero estructura mental."],bullets:["Respuesta de nivel Big Tech (categorizada):","Funcional: cada piso es accesible, puertas abren/cierran correctamente, indicador de piso es correcto, botón de piso presionado se ilumina","Edge cases: presionar todos los pisos a la vez, presionar un piso y luego cancelar, presionar el piso actual","Concurrencia: llamadas simultáneas desde múltiples pisos — ¿el algoritmo de scheduling es eficiente?","Seguridad: sensor de puertas detecta obstrucción, freno de emergencia funciona, teléfono de emergencia conecta, sobrepeso activa alarma","Performance: tiempo de espera máximo aceptable, capacidad de peso, comportamiento con carga máxima","Resiliencia: corte de energía durante movimiento, fallo de sensor de piso, pérdida de comunicación con el sistema central","Accesibilidad: botones con braille, anuncios de voz para cada piso, tiempo de puerta abierta suficiente para silla de ruedas"]},
+{title:"El factor diferenciador",paragraphs:["No es lo que sabes. Es cómo PIENSAS EN VOZ ALTA. Los entrevistadores evalúan tu proceso de razonamiento, no tu lista de respuestas memorizadas."],highlight:"Practica verbalizar tu proceso de pensamiento. Usa el formato STAR para experiencias: Situation, Task, Action, Result. Y siempre termina con qué aprendiste y qué harías diferente hoy."}
+],
+senior:"En la entrevista, cuando no sepas algo, di: \"No tengo experiencia directa con eso, pero mi approach sería...\" Eso demuestra dos cosas que los entrevistadores valoran enormemente: honestidad intelectual Y capacidad de resolver problemas nuevos. Pretender que sabes todo es la forma más rápida de fallar una entrevista técnica.",
+exercise:{title:"Mock Interview",scenario:"Responde estas 3 preguntas como si estuvieras en una entrevista real de FAANG (Facebook/Meta, Amazon, Apple, Netflix, Google).",task:"1. \"¿Cómo testearías la barra de búsqueda de Google?\"\n   (Organiza tu respuesta en categorías claras. No listes tests al azar.)\n\n2. \"Encontraste 15 bugs en un sprint. 3 son P0, 5 son P1, 7 son P2. Development solo puede arreglar 8 este sprint. ¿Cuáles priorizas y cómo comunicas la decisión al equipo?\"\n\n3. \"¿Cuál es la diferencia entre un buen tester y un gran tester?\"\n\nEscribe tus respuestas completas. Sé específico, no genérico.",solution:["1. Barra de búsqueda de Google — Funcional: búsqueda normal, vacía, caracteres especiales, query extremadamente larga (10K chars). Autocompletado: velocidad de sugerencias (<100ms), relevancia, personalización basada en historial. Resultados: orden correcto, paginación, snippets, links funcionales. Internacionalización: búsqueda en japonés, árabe (RTL), emojis, caracteres Unicode. Performance: latencia < 200ms incluso con millones de queries simultáneas. Seguridad: XSS en el query parameter, SQL injection si aplica, rate limiting. Accesibilidad: screen reader navegando resultados, keyboard-only navigation, suficiente contraste.","2. Los 3 P0 son no negociables — se arreglan primero, sin discusión. Para los 5 P1, evalúo: ¿cuáles afectan más usuarios? ¿hay workaround disponible? ¿son regresiones? ¿impactan revenue directo? Selecciono los 5 de mayor impacto. Comunicación al equipo: \"Priorizamos estos 8 por impacto a usuarios y revenue. Los 7 P2 restantes van al backlog priorizado — los primeros 3 están calendarizados para el inicio del próximo sprint. Aquí está el dashboard con el detalle.\"","3. Un buen tester encuentra bugs. Un gran tester PREVIENE bugs participando desde el diseño. Un buen tester ejecuta test cases. Un gran tester diseña ESTRATEGIAS de testing basadas en riesgo. Un buen tester reporta defectos. Un gran tester mejora el PROCESO para que esos tipos de defectos no vuelvan a ocurrir. Un buen tester conoce herramientas. Un gran tester sabe cuándo NO usar una herramienta."]}}
+],
+quiz:[
+{q:"La mejor forma de comunicar un bug a un developer:",o:["\"Tu código tiene un bug en el login\"","\"Comportamiento inesperado: al hacer X, ocurre Y en vez de Z según REQ-123. ¿Intencional?\"","\"El login está roto, arréglalo por favor\"","\"Te asigné el ticket BUG-456, revísalo\""],a:1},
+{q:"Ownership real en QA significa:",o:["Que eres responsable de ejecutar todos los tests","Que si un bug llega a producción, la culpa es del developer","Que tu responsabilidad es la calidad del PRODUCTO completo","Que debes arreglar los bugs tú mismo si los devs no pueden"],a:2},
+{q:"En una entrevista técnica, cuando no sabes algo:",o:["Inventas una respuesta que suene creíble","\"No tengo experiencia directa, pero mi approach sería...\"","Cambias el tema a algo que sí dominas","Dices que eso nunca lo preguntan en entrevistas reales"],a:1},
+{q:"La diferencia clave entre un buen tester y un gran tester:",o:["El gran tester encuentra más bugs por sprint","El gran tester automatiza más del 90% de los tests","El gran tester previene bugs y mejora procesos sistémicamente","El gran tester tiene más certificaciones y cursos"],a:2},
+{q:"Un dev senior rechaza tu bug con evidencia de que contradice el requisito. Tu acción:",o:["Cerrar el bug para no generar conflicto con un senior","Escalar al PM gritando que el dev está equivocado","Mostrar el requisito escrito y preguntar si cambió, con datos","Abrir otro bug idéntico para que otro dev lo revise"],a:2}
+]}
 ];
 
-const FINAL_EXAM = {
-  title: "Evaluación Final — QA Engineer",
-  scenario: `Eres contratado como QA Lead para "QuickPay", una fintech de pagos móviles. La app permite: registro con KYC, agregar tarjetas, enviar dinero entre usuarios, pagar con QR, y solicitar créditos.
+const FE={
+title:"Evaluación Final — QA Engineer",
+scenario:"Eres contratado como QA Lead para \"QuickPay\", una fintech de pagos móviles. La app permite: registro con verificación de identidad (KYC), agregar tarjetas de crédito/débito, enviar dinero entre usuarios, pagar en comercios con QR, y solicitar créditos pre-aprobados.\n\nNueva feature: \"Pagos Programados\" — el usuario programa pagos recurrentes automáticos (renta mensual, suscripciones). El pago se ejecuta automáticamente en la fecha configurada.\n\nReglas de negocio:\n\u2022 Monto mínimo: $1.00, máximo: $10,000.00 por transacción\n\u2022 Frecuencias disponibles: semanal, quincenal, mensual\n\u2022 El usuario puede cancelar o modificar hasta 24h antes de la ejecución\n\u2022 Si no hay fondos suficientes, se reintenta 2 veces (a las 4h y 8h)\n\u2022 Después de 3 fallos consecutivos, el pago programado se desactiva automáticamente\n\u2022 Se envía notificación: 24h antes, al momento de ejecutar, y si falla\n\u2022 El historial de pagos programados debe estar disponible por 2 años",
+parts:[
+{id:"p1",title:"Parte 1 — Análisis de Riesgo",prompt:"Identifica los 5 riesgos más críticos de esta feature. Para cada uno describe:\n\n1. El riesgo concreto (qué puede salir mal)\n2. El impacto al negocio (en términos de dinero, usuarios afectados, o regulación)\n3. Cómo lo testearías (approach técnico específico)",rubric:"Debe incluir: riesgos financieros (doble cobro en reintento + pago manual), seguridad (modificación no autorizada de pagos de otro usuario), temporales (cambio de horario verano/invierno, timezones diferentes), lógica de reintentos (¿qué pasa si el reintento coincide con un depósito?), compliance/regulación (PCI DSS, GDPR para datos de pago almacenados)."},
+{id:"p2",title:"Parte 2 — Casos de Prueba",prompt:"Escribe 6 casos de prueba profesionales para esta feature:\n\n\u2022 2 happy paths (flujos principales exitosos)\n\u2022 2 edge cases (situaciones límite no obvias)\n\u2022 1 caso de seguridad\n\u2022 1 caso de integración entre servicios\n\nFormato completo: precondiciones, pasos, resultado esperado.",rubric:"Evalúa: ¿Los casos tienen datos específicos? ¿Son reproducibles por otra persona? ¿Los edge cases son realmente no obvios (timezone, cambio de horario, monto exacto del límite)? ¿El caso de seguridad es relevante (ej: modificar pago de otro usuario via API)? ¿El de integración considera fallo entre servicios (ej: Payment Service caído durante ejecución)?"},
+{id:"p3",title:"Parte 3 — Detección de Bugs",prompt:"Durante testing encuentras estos comportamientos. Para cada uno: ¿es bug o comportamiento esperado? Si es bug, clasifica severidad y prioridad con justificación.\n\n1. Un pago programado para el 31 de febrero se ejecuta el 3 de marzo.\n2. Al modificar el monto 23 horas antes de la ejecución, el cambio no se aplica.\n3. Un usuario con cuenta \"Suspended\" puede seguir teniendo pagos programados activos que se ejecutan normalmente.\n4. El email de notificación \"24h antes\" llega 26 horas antes.\n5. Si el usuario elimina la tarjeta asociada al pago, el pago programado sigue activo pero falla en ejecución sin notificación previa.",rubric:"1: Bug (31 de febrero no existe, el sistema debería rechazar la fecha o manejarla correctamente). 2: Bug (la regla dice modificar hasta 24h antes — 23h está DENTRO del plazo, debería permitir el cambio). 3: Bug CRITICAL (una cuenta suspended NO debe ejecutar transacciones financieras — esto es un issue de seguridad y compliance). 4: Debatible (2h de margen podría ser aceptable dependiendo de timezone del usuario vs servidor). 5: Bug HIGH (debería validar que la tarjeta sigue activa antes de la ejecución, o notificar al usuario cuando elimina una tarjeta con pagos activos)."},
+{id:"p4",title:"Parte 4 — Priorización",prompt:"Tienes estos 6 bugs y el sprint solo permite arreglar 3. Selecciona los 3, ordénalos por prioridad y justifica cada decisión.\n\n1. Doble cobro cuando el reintento automático coincide con un pago manual del usuario.\n2. El historial solo muestra los últimos 6 meses en vez de 2 años.\n3. La notificación de fallo llega en inglés a usuarios con idioma español configurado.\n4. Usuario con cuenta Suspended ejecuta pagos programados normalmente.\n5. El botón \"Cancelar pago programado\" no responde en iOS 16.\n6. El monto máximo acepta $10,000.01 (off by one cent).",rubric:"Orden correcto: #1 (doble cobro = pérdida financiera directa para el usuario, chargebacks, pérdida de confianza — P0 inmediato), #4 (breach de seguridad/compliance, cuenta suspended ejecutando transacciones — P0), #5 (funcionalidad bloqueada para un segmento significativo de usuarios iOS — P1). Los otros pueden esperar: #2 (compliance de retención pero no inmediato), #3 (UX/localización, no bloquea funcionalidad), #6 (técnicamente un bug pero $0.01 de impacto real — off by one que se arregla rápido pero no es urgente)."}
+]};
 
-Nueva feature: "Pagos Programados" — pagos recurrentes automáticos (renta, suscripciones).
-
-Reglas de negocio:
-• Monto: $1.00 mínimo, $10,000.00 máximo por transacción
-• Frecuencias: semanal, quincenal, mensual
-• Cancelar/modificar hasta 24h antes de ejecución
-• Sin fondos: reintento a las 4h y 8h
-• 3 fallos consecutivos: pago se desactiva
-• Notificaciones: 24h antes, al ejecutar, y si falla
-• Historial disponible por 2 años`,
-  parts: [
-    {
-      id: "p1", title: "Parte 1 — Análisis de Riesgo",
-      prompt: "Identifica los 5 riesgos más críticos. Para cada uno: riesgo, impacto concreto (dinero, usuarios, regulación), y cómo lo testearías.",
-      rubric: "Debe incluir: riesgos financieros (doble cobro), seguridad (modificación no autorizada), temporales (timezone, horario verano), reintentos (cobro parcial), compliance/regulación."
-    },
-    {
-      id: "p2", title: "Parte 2 — Casos de Prueba",
-      prompt: "Escribe 6 casos profesionales: 2 happy paths, 2 edge cases, 1 seguridad, 1 integración. Formato completo.",
-      rubric: "Datos específicos, reproducibles, edge cases no obvios, caso de seguridad relevante (e.g., modificar pago de otro usuario), integración que considere fallo entre servicios."
-    },
-    {
-      id: "p3", title: "Parte 3 — Detección de Bugs",
-      prompt: "¿Bug o comportamiento esperado? Clasifica:\n\n1. Pago programado para 31 de febrero se ejecuta el 3 de marzo.\n2. Modificar monto 23h antes: cambio no se aplica.\n3. Cuenta Suspended sigue ejecutando pagos programados.\n4. Email \"24h antes\" llega 26 horas antes.\n5. Usuario elimina tarjeta asociada: pago sigue activo pero falla.",
-      rubric: "#1: Bug (31 feb no existe). #2: Bug (límite es 24h, 23h debería permitir). #3: CRITICAL (suspended no debe transaccionar). #4: Debatible (2h margen aceptable). #5: HIGH (debería validar tarjeta o notificar)."
-    },
-    {
-      id: "p4", title: "Parte 4 — Priorización",
-      prompt: "6 bugs, arreglar solo 3:\n\n1. Doble cobro cuando reintento coincide con pago manual\n2. Historial solo muestra 6 meses (no 2 años)\n3. Notificación de fallo en inglés para usuarios en español\n4. Cuenta Suspended ejecuta pagos programados\n5. Botón Cancelar no responde en iOS 16\n6. Acepta $10,000.01 (off by one)\n\nSelecciona, ordena y justifica.",
-      rubric: "#1 (doble cobro, P0), #4 (breach seguridad, P0), #5 (funcionalidad bloqueada, P1). Los otros pueden esperar."
-    }
-  ]
-};
-
-
-/* ═══════════════════════════════════════════
-   VIEW: LESSON
-   ═══════════════════════════════════════════ */
-const LessonView = ({ lesson, onComplete, isComplete }) => {
-  const [tab, setTab] = useState(0);
-  const [showSol, setShowSol] = useState(false);
-  const [answer, setAnswer] = useState("");
-
-  useEffect(() => { setTab(0); setShowSol(false); setAnswer(""); }, [lesson.id]);
-
-  const tabs = ["Contenido", "Insight Senior", "Ejercicio"];
-
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 28 }}>
-        {tabs.map((t, i) => (
-          <button key={i} onClick={() => setTab(i)} style={{
-            padding: "7px 16px", borderRadius: 7, border: `1px solid ${i === tab ? T.accent : T.border}`,
-            background: i === tab ? T.accentBg : "transparent", color: i === tab ? T.accentL : T.t4,
-            cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "inherit"
-          }}>{t}</button>
-        ))}
+/* ═══════════════════════════════════════════════════════════════
+   VIEWS
+   ═══════════════════════════════════════════════════════════════ */
+const LessonView=({lesson,onComplete,isComplete})=>{
+  const[tab,setTab]=useState(0);
+  const[showSol,setShowSol]=useState(false);
+  const[answer,setAnswer]=useState("");
+  useEffect(()=>{setTab(0);setShowSol(false);setAnswer("");},[lesson.id]);
+  const tabs=["Contenido","Insight Senior","Ejercicio"];
+  return(
+    <div style={{textAlign:"left"}}>
+      <div style={{display:"flex",gap:6,marginBottom:24,flexWrap:"wrap"}}>
+        {tabs.map((t,i)=><button key={i} onClick={()=>setTab(i)} style={{padding:"7px 16px",borderRadius:7,fontSize:13,fontWeight:600,fontFamily:"inherit",cursor:"pointer",border:`1px solid ${i===tab?T.accent:T.border}`,background:i===tab?T.accentBg:"transparent",color:i===tab?T.accentL:T.t4}}>{t}</button>)}
       </div>
-
-      {tab === 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Intro */}
-          <Section badge="Introducción" border={T.accent}>
-            <P>{lesson.intro}</P>
-          </Section>
-
-          {/* Content sections */}
-          {lesson.sections.map((s, i) => (
-            <Section key={i} title={s.title}>
-              {s.paragraphs?.map((p, j) => <P key={j}>{p}</P>)}
-              {s.bullets && <BulletList items={s.bullets} />}
-              {s.highlight && (
-                <div style={{ padding: "12px 16px", background: T.amberBg, borderLeft: `3px solid ${T.amber}`, borderRadius: 6, marginTop: 8 }}>
-                  <P style={{ margin: 0, color: T.t1, fontWeight: 500 }}>{s.highlight}</P>
-                </div>
-              )}
-            </Section>
-          ))}
-        </div>
-      )}
-
-      {tab === 1 && (
-        <Section badge="Perspectiva Senior" badgeColor={T.accent} border={T.accent}>
-          <P style={{ fontStyle: "italic", color: T.t1, fontSize: 15, lineHeight: 1.9 }}>{lesson.senior}</P>
+      {tab===0&&<div style={{display:"flex",flexDirection:"column",gap:18}}>
+        <Section badge="Introducción" border={T.accent}><P>{lesson.intro}</P></Section>
+        {lesson.sections.map((s,i)=><Section key={i} title={s.title}>
+          {s.paragraphs?.map((p,j)=><P key={j}>{p}</P>)}
+          {s.bullets&&<BL items={s.bullets}/>}
+          {s.highlight&&<HL>{s.highlight}</HL>}
+          {s.paragraphs2?.map((p,j)=><P key={"p2"+j}>{p}</P>)}
+        </Section>)}
+      </div>}
+      {tab===1&&<Section badge="Perspectiva Senior" badgeColor={T.accent} border={T.accent}><P style={{fontStyle:"italic",color:T.t1,fontSize:15,lineHeight:1.9}}>{lesson.senior}</P></Section>}
+      {tab===2&&lesson.exercise&&<div style={{display:"flex",flexDirection:"column",gap:18}}>
+        <Section badge="Ejercicio" badgeColor={T.amber} border={T.amber}>
+          <P style={{fontWeight:600,color:T.t1}}>{lesson.exercise.title}</P>
+          {lesson.exercise.scenario&&<P>{lesson.exercise.scenario}</P>}
+          <div style={{whiteSpace:"pre-wrap",fontSize:14,lineHeight:1.85,color:T.t2}}>{lesson.exercise.task}</div>
         </Section>
-      )}
-
-      {tab === 2 && lesson.exercise && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <Section badge="Ejercicio Práctico" badgeColor={T.amber} border={T.amber}>
-            <P style={{ fontWeight: 600, color: T.t1 }}>{lesson.exercise.title}</P>
-            {lesson.exercise.scenario && <P>{lesson.exercise.scenario}</P>}
-            <div style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.85, color: T.t2 }}>{lesson.exercise.task}</div>
-          </Section>
-
-          <Section title="Tu respuesta">
-            <textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="Escribe tu respuesta aquí antes de ver la solución..."
-              style={{ width: "100%", minHeight: 150, padding: 14, borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg, color: T.t1, fontSize: 14, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", lineHeight: 1.7 }} />
-            <div style={{ marginTop: 14 }}>
-              <Btn variant="outline" onClick={() => setShowSol(!showSol)}>{showSol ? "Ocultar" : "Ver"} Respuesta Modelo</Btn>
-            </div>
-            {showSol && (
-              <div style={{ marginTop: 16, padding: 16, background: T.greenBg, borderRadius: 8, borderLeft: `3px solid ${T.green}` }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: T.green, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>Respuesta de referencia</div>
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {lesson.exercise.solution.map((s, i) => (
-                    <li key={i} style={{ fontSize: 13, lineHeight: 1.85, color: T.t2, marginBottom: 8 }}>{s}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </Section>
-        </div>
-      )}
-
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 28 }}>
-        <Btn onClick={onComplete} style={{ background: isComplete ? T.green : T.accent }}>
-          {isComplete ? "Completada ✓" : "Marcar como completada"}
-        </Btn>
+        <Section title="Tu respuesta">
+          <textarea value={answer} onChange={e=>setAnswer(e.target.value)} placeholder="Escribe aquí antes de ver la solución..." style={{width:"100%",minHeight:140,padding:14,borderRadius:8,border:`1px solid ${T.border}`,background:T.bg,color:T.t1,fontSize:14,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box",lineHeight:1.7}}/>
+          <div style={{marginTop:12}}><Btn variant="outline" onClick={()=>setShowSol(!showSol)}>{showSol?"Ocultar":"Ver"} Respuesta Modelo</Btn></div>
+          {showSol&&<div style={{marginTop:14,padding:16,background:T.greenBg,borderRadius:8,borderLeft:`3px solid ${T.green}`}}>
+            <div style={{fontSize:10,fontWeight:700,color:T.green,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Referencia</div>
+            <ul style={{margin:0,paddingLeft:18}}>{lesson.exercise.solution.map((s,i)=><li key={i} style={{fontSize:13,lineHeight:1.85,color:T.t2,marginBottom:8}}>{s}</li>)}</ul>
+          </div>}
+        </Section>
+      </div>}
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:24}}>
+        <Btn onClick={onComplete} style={{background:isComplete?T.green:T.accent}}>{isComplete?"Completada ✓":"Marcar como completada"}</Btn>
       </div>
     </div>
   );
 };
 
-
-/* ═══════════════════════════════════════════
-   VIEW: QUIZ
-   ═══════════════════════════════════════════ */
-const QuizView = ({ quiz, moduleId, onComplete, onExit, existingScore }) => {
-  const [answers, setAnswers] = useState({});
-  const [submitted, setSubmitted] = useState(existingScore !== undefined);
-  const [score, setScore] = useState(existingScore || 0);
-
-  const total = quiz.length;
-  const answered = Object.keys(answers).length;
-
-  const submit = () => {
-    let c = 0;
-    quiz.forEach((q, i) => { if (answers[i] === q.a) c++; });
-    const s = Math.round((c / total) * 100);
-    setScore(s);
-    setSubmitted(true);
-    if (s >= 70) onComplete(s);
-  };
-
-  if (submitted) {
-    const passed = score >= 70;
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <Section border={passed ? T.green : T.red}>
-          <div style={{ textAlign: "center", padding: "16px 0" }}>
-            <div style={{ fontSize: 48, fontWeight: 800, color: passed ? T.green : T.red }}>{score}%</div>
-            <P style={{ textAlign: "center", margin: "8px 0 0" }}>{passed ? "Aprobado — módulo completado" : "No aprobado — mínimo 70% requerido"}</P>
-          </div>
-        </Section>
-        {quiz.map((q, i) => {
-          const ok = answers[i] === q.a;
-          return (
-            <div key={i} style={{ padding: "14px 16px", borderRadius: 8, background: ok ? T.greenBg : T.redBg, borderLeft: `3px solid ${ok ? T.green : T.red}` }}>
-              <P style={{ fontWeight: 600, color: T.t1, marginBottom: 4 }}>{i + 1}. {q.q}</P>
-              <P style={{ margin: 0, fontSize: 13, color: ok ? T.green : T.red }}>
-                {ok ? "Correcto" : `Incorrecto — Respuesta: ${q.o[q.a]}`}
-              </P>
-            </div>
-          );
-        })}
-        <div style={{ display: "flex", gap: 10 }}>
-          {!passed && <Btn onClick={() => { setSubmitted(false); setAnswers({}); }}>Reintentar</Btn>}
-          <Btn variant="outline" onClick={onExit}>Volver al módulo</Btn>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+const QuizView=({quiz,onComplete,onExit,existingScore})=>{
+  const[answers,setAnswers]=useState({});
+  const[submitted,setSubmitted]=useState(existingScore!==undefined);
+  const[score,setScore]=useState(existingScore||0);
+  const total=quiz.length,answered=Object.keys(answers).length;
+  const submit=()=>{let c=0;quiz.forEach((q,i)=>{if(answers[i]===q.a)c++;});const s=Math.round((c/total)*100);setScore(s);setSubmitted(true);if(s>=70)onComplete(s);};
+  if(submitted){const passed=score>=70;return(
+    <div style={{display:"flex",flexDirection:"column",gap:18,textAlign:"left"}}>
+      <Section border={passed?T.green:T.red}><div style={{textAlign:"center",padding:"12px 0"}}><div style={{fontSize:44,fontWeight:800,color:passed?T.green:T.red}}>{score}%</div><P style={{textAlign:"center",margin:"6px 0 0"}}>{passed?"Aprobado":"No aprobado — mínimo 70%"}</P></div></Section>
+      {quiz.map((q,i)=>{const ok=answers[i]===q.a;return <div key={i} style={{padding:"12px 16px",borderRadius:8,background:ok?T.greenBg:T.redBg,borderLeft:`3px solid ${ok?T.green:T.red}`}}><P style={{fontWeight:600,color:T.t1,marginBottom:4}}>{i+1}. {q.q}</P><P style={{margin:0,fontSize:13,color:ok?T.green:T.red}}>{ok?"Correcto":`Incorrecto — ${q.o[q.a]}`}</P></div>;})}
+      <div style={{display:"flex",gap:10}}>{!passed&&<Btn onClick={()=>{setSubmitted(false);setAnswers({});}}>Reintentar</Btn>}<Btn variant="outline" onClick={onExit}>Volver al módulo</Btn></div>
+    </div>);}
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:18,textAlign:"left"}}>
       <Section badge="Evaluación" badgeColor={T.amber}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <P style={{ margin: 0 }}>Responde al menos el 70% correctamente para aprobar.</P>
-          <span style={{ fontSize: 12, color: T.t4, fontWeight: 600 }}>{answered}/{total}</span>
-        </div>
-        <div style={{ height: 3, background: T.bg3, borderRadius: 2, marginTop: 10, overflow: "hidden" }}>
-          <div style={{ width: `${(answered / total) * 100}%`, height: "100%", background: T.accent, transition: "width .3s" }} />
-        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><P style={{margin:0}}>Mínimo 70% para aprobar.</P><span style={{fontSize:12,color:T.t4,fontWeight:600}}>{answered}/{total}</span></div>
+        <div style={{height:3,background:T.bg3,borderRadius:2,marginTop:10,overflow:"hidden"}}><div style={{width:`${(answered/total)*100}%`,height:"100%",background:T.accent}}/></div>
       </Section>
-
-      {quiz.map((q, i) => (
-        <Section key={i}>
-          <P style={{ fontWeight: 600, color: T.t1 }}>{i + 1}. {q.q}</P>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-            {q.o.map((opt, oi) => (
-              <button key={oi} onClick={() => setAnswers({ ...answers, [i]: oi })}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 8, textAlign: "left", fontFamily: "inherit",
-                  border: `1px solid ${answers[i] === oi ? T.accent : T.border}`,
-                  background: answers[i] === oi ? T.accentBg : "transparent",
-                  color: answers[i] === oi ? T.accentL : T.t3, cursor: "pointer", fontSize: 13, transition: "all .12s"
-                }}>
-                <span style={{ width: 16, height: 16, borderRadius: 99, border: `2px solid ${answers[i] === oi ? T.accent : T.borderL}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {answers[i] === oi && <span style={{ width: 7, height: 7, borderRadius: 99, background: T.accent }} />}
-                </span>
-                {opt}
-              </button>
-            ))}
-          </div>
-        </Section>
-      ))}
-
-      <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
-        <Btn variant="ghost" onClick={onExit}>Salir del quiz</Btn>
-        <Btn onClick={submit} disabled={answered < total} style={{ opacity: answered < total ? 0.4 : 1 }}>
-          Enviar ({answered}/{total})
-        </Btn>
-      </div>
-    </div>
-  );
+      {quiz.map((q,i)=><Section key={i}><P style={{fontWeight:600,color:T.t1}}>{i+1}. {q.q}</P><div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {q.o.map((opt,oi)=><button key={oi} onClick={()=>setAnswers({...answers,[i]:oi})} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,textAlign:"left",fontFamily:"inherit",border:`1px solid ${answers[i]===oi?T.accent:T.border}`,background:answers[i]===oi?T.accentBg:"transparent",color:answers[i]===oi?T.accentL:T.t3,cursor:"pointer",fontSize:13}}>
+          <span style={{width:16,height:16,borderRadius:99,border:`2px solid ${answers[i]===oi?T.accent:T.borderL}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{answers[i]===oi&&<span style={{width:7,height:7,borderRadius:99,background:T.accent}}/>}</span>{opt}
+        </button>)}
+      </div></Section>)}
+      <div style={{display:"flex",gap:10,justifyContent:"space-between"}}><Btn variant="ghost" onClick={onExit}>Salir del quiz</Btn><Btn onClick={submit} disabled={answered<total} style={{opacity:answered<total?.4:1}}>Enviar ({answered}/{total})</Btn></div>
+    </div>);
 };
 
-
-/* ═══════════════════════════════════════════
-   VIEW: FINAL EXAM
-   ═══════════════════════════════════════════ */
-const FinalExamView = ({ exam, onBack }) => {
-  const [answers, setAnswers] = useState({});
-  const [submitted, setSubmitted] = useState(false);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+const FinalView=({exam,onBack})=>{
+  const[answers,setAnswers]=useState({});
+  const[submitted,setSubmitted]=useState(false);
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:20,textAlign:"left"}}>
       <Section badge="Evaluación Final" badgeColor={T.accent} border={T.accent}>
-        <h3 style={{ margin: "8px 0 12px", fontSize: 18, fontWeight: 700, color: T.t1 }}>Caso: QuickPay — Pagos Programados</h3>
-        <div style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.85, color: T.t2 }}>{exam.scenario}</div>
+        <h3 style={{margin:"8px 0 12px",fontSize:18,fontWeight:700,color:T.t1,textAlign:"left"}}>Caso: QuickPay — Pagos Programados</h3>
+        <div style={{whiteSpace:"pre-wrap",fontSize:14,lineHeight:1.85,color:T.t2}}>{exam.scenario}</div>
       </Section>
-
-      {exam.parts.map((part, i) => (
-        <Section key={part.id} title={part.title}>
-          <div style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.85, color: T.t2, marginBottom: 14 }}>{part.prompt}</div>
-          <textarea value={answers[part.id] || ""} onChange={e => setAnswers({ ...answers, [part.id]: e.target.value })}
-            placeholder="Tu respuesta..." disabled={submitted}
-            style={{ width: "100%", minHeight: 160, padding: 14, borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg, color: T.t1, fontSize: 14, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", lineHeight: 1.7 }} />
-          {submitted && (
-            <div style={{ marginTop: 14, padding: 14, background: T.greenBg, borderRadius: 8, borderLeft: `3px solid ${T.green}` }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: T.green, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Rúbrica de evaluación</div>
-              <P style={{ margin: 0, fontSize: 13 }}>{part.rubric}</P>
-            </div>
-          )}
-        </Section>
-      ))}
-
-      <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
-        <Btn variant="ghost" onClick={onBack}>Volver al inicio</Btn>
-        {!submitted ? (
-          <Btn onClick={() => setSubmitted(true)} disabled={Object.keys(answers).length < exam.parts.length}
-            style={{ opacity: Object.keys(answers).length < exam.parts.length ? 0.4 : 1 }}>
-            Enviar Evaluación Final
-          </Btn>
-        ) : (
-          <Badge color={T.green}>Evaluación completada</Badge>
-        )}
-      </div>
-    </div>
-  );
+      {exam.parts.map(p=><Section key={p.id} title={p.title}>
+        <div style={{whiteSpace:"pre-wrap",fontSize:14,lineHeight:1.85,color:T.t2,marginBottom:12}}>{p.prompt}</div>
+        <textarea value={answers[p.id]||""} onChange={e=>setAnswers({...answers,[p.id]:e.target.value})} placeholder="Tu respuesta..." disabled={submitted} style={{width:"100%",minHeight:140,padding:14,borderRadius:8,border:`1px solid ${T.border}`,background:T.bg,color:T.t1,fontSize:14,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box",lineHeight:1.7}}/>
+        {submitted&&<div style={{marginTop:12,padding:14,background:T.greenBg,borderRadius:8,borderLeft:`3px solid ${T.green}`}}><div style={{fontSize:10,fontWeight:700,color:T.green,marginBottom:6,textTransform:"uppercase"}}>Rúbrica</div><P style={{margin:0,fontSize:13}}>{p.rubric}</P></div>}
+      </Section>)}
+      <div style={{display:"flex",gap:10,justifyContent:"space-between"}}><Btn variant="ghost" onClick={onBack}>Volver</Btn>{!submitted&&<Btn onClick={()=>setSubmitted(true)} disabled={Object.keys(answers).length<exam.parts.length} style={{opacity:Object.keys(answers).length<exam.parts.length?.4:1}}>Enviar Evaluación</Btn>}</div>
+    </div>);
 };
 
-
-/* ═══════════════════════════════════════════
-   VIEW: HOME
-   ═══════════════════════════════════════════ */
-const HomeView = ({ modules, progress, quizScores, onSelectModule, onSelectFinal, finalUnlocked }) => {
-  const totalItems = modules.reduce((a, m) => a + m.lessons.length, 0) + modules.length;
-  const doneItems = Object.values(progress).filter(Boolean).length;
-  const pct = Math.round((doneItems / totalItems) * 100);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div>
-        <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 800, color: T.t1 }}>QA Engineering Mastery</h2>
-        <P style={{ margin: 0 }}>Programa profesional de Quality Assurance — de cero a nivel Big Tech.</P>
-      </div>
-
+const HomeView=({modules,progress,quizScores,onMod,onFinal,finalUnlocked})=>{
+  const ti=modules.reduce((a,m)=>a+m.lessons.length,0)+modules.length;
+  const d=Object.values(progress).filter(Boolean).length;
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:20,textAlign:"left"}}>
+      <div><h2 style={{margin:"0 0 6px",fontSize:22,fontWeight:800,color:T.t1,textAlign:"left"}}>QA Engineering Mastery</h2><P style={{margin:0}}>Programa profesional — de cero a nivel Big Tech.</P></div>
       <Section>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <P style={{ margin: 0, fontWeight: 600, color: T.t1 }}>Progreso general</P>
-          <span style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>{pct}%</span>
-        </div>
-        <div style={{ height: 6, background: T.bg3, borderRadius: 3, overflow: "hidden" }}>
-          <div style={{ width: `${pct}%`, height: "100%", background: T.accent, borderRadius: 3, transition: "width .4s" }} />
-        </div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}><P style={{margin:0,fontWeight:600,color:T.t1}}>Progreso general</P><span style={{fontSize:13,fontWeight:700,color:T.accent}}>{Math.round((d/ti)*100)}%</span></div>
+        <div style={{height:5,background:T.bg3,borderRadius:3,overflow:"hidden"}}><div style={{width:`${(d/ti)*100}%`,height:"100%",background:T.accent,borderRadius:3}}/></div>
       </Section>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {modules.map((m, i) => {
-          const lessonsDone = m.lessons.filter((_, li) => progress[`${m.id}-${li}`]).length;
-          const qDone = quizScores[m.id] !== undefined;
-          const allDone = lessonsDone === m.lessons.length && qDone;
-          return (
-            <button key={m.id} onClick={() => onSelectModule(i)}
-              style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "border-color .15s" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = T.accent}
-              onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
-              <span style={{ width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, background: allDone ? T.greenBg : T.accentBg, color: allDone ? T.green : T.accentL, flexShrink: 0 }}>
-                {allDone ? "✓" : i + 1}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>{m.title}</div>
-                <div style={{ fontSize: 12, color: T.t4, marginTop: 2 }}>{m.desc.length > 80 ? m.desc.slice(0, 80) + "…" : m.desc}</div>
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 12, color: T.t4 }}>{lessonsDone}/{m.lessons.length} lecciones</div>
-                {qDone && <div style={{ fontSize: 11, color: T.green, marginTop: 2 }}>Quiz: {quizScores[m.id]}%</div>}
-              </div>
-            </button>
-          );
-        })}
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {modules.map((m,i)=>{const ld=m.lessons.filter((_,li)=>progress[`${m.id}-${li}`]).length;const qd=quizScores[m.id]!==undefined;const ad=ld===m.lessons.length&&qd;
+        return <button key={m.id} onClick={()=>onMod(i)} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:T.bg2,border:`1px solid ${T.border}`,borderRadius:10,cursor:"pointer",textAlign:"left",fontFamily:"inherit",width:"100%",boxSizing:"border-box"}}>
+          <span style={{width:30,height:30,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,background:ad?T.greenBg:T.accentBg,color:ad?T.green:T.accentL,flexShrink:0}}>{ad?"✓":i+1}</span>
+          <div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:700,color:T.t1}}>{m.title}</div><div style={{fontSize:12,color:T.t4,marginTop:2}}>{ld}/{m.lessons.length} lecciones{qd?` · Quiz ${quizScores[m.id]}%`:""}</div></div>
+        </button>;})}
       </div>
-
-      <Divider />
-
-      <button onClick={onSelectFinal} disabled={!finalUnlocked}
-        style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px 20px", background: T.bg2, border: `1px solid ${finalUnlocked ? T.accent : T.border}`, borderRadius: 10, cursor: finalUnlocked ? "pointer" : "default", textAlign: "left", fontFamily: "inherit", opacity: finalUnlocked ? 1 : 0.5 }}>
-        <span style={{ width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, background: T.accentBg, color: T.accentL }}>{finalUnlocked ? "F" : "🔒"}</span>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>Evaluación Final — QA Engineer</div>
-          <div style={{ fontSize: 12, color: T.t4, marginTop: 2 }}>{finalUnlocked ? "Caso real completo de una fintech" : "Completa todos los quizzes para desbloquear"}</div>
-        </div>
+      <div style={{height:1,background:T.border}}/>
+      <button onClick={onFinal} disabled={!finalUnlocked} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:T.bg2,border:`1px solid ${finalUnlocked?T.accent:T.border}`,borderRadius:10,cursor:finalUnlocked?"pointer":"default",textAlign:"left",fontFamily:"inherit",opacity:finalUnlocked?1:.5,width:"100%",boxSizing:"border-box"}}>
+        <span style={{width:30,height:30,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,background:T.accentBg,color:T.accentL}}>{finalUnlocked?"F":"🔒"}</span>
+        <div><div style={{fontSize:14,fontWeight:700,color:T.t1}}>Evaluación Final</div><div style={{fontSize:12,color:T.t4,marginTop:2}}>{finalUnlocked?"Caso real fintech":"Completa todos los quizzes"}</div></div>
       </button>
-    </div>
-  );
+    </div>);
 };
 
+/* ═══════════════════════════════════════════════════════════════
+   MAIN APP — FIXED ROOT WRAPPER
+   ═══════════════════════════════════════════════════════════════ */
+export default function App(){
+  const[view,setView]=useState({page:"home"});
+  const[mi,setMi]=useState(0);
+  const[li,setLi]=useState(0);
+  const[progress,setProgress]=useState({});
+  const[qs,setQs]=useState({});
+  const mainRef=useRef(null);
 
-/* ═══════════════════════════════════════════
-   MAIN APP
-   ═══════════════════════════════════════════ */
-export default function App() {
-  const [view, setView] = useState({ page: "home" }); // home | module | quiz | final
-  const [activeModIdx, setActiveModIdx] = useState(0);
-  const [activeLesIdx, setActiveLesIdx] = useState(0);
-  const [progress, setProgress] = useState({});
-  const [quizScores, setQuizScores] = useState({});
-  const mainRef = useRef(null);
+  const scroll=()=>{if(mainRef.current)mainRef.current.scrollTop=0;};
+  const goHome=()=>{setView({page:"home"});scroll();};
+  const goMod=(i,l=0)=>{setMi(i);setLi(l);setView({page:"module"});scroll();};
+  const goQuiz=()=>{setView({page:"quiz"});scroll();};
+  const goFinal=()=>{setView({page:"final"});scroll();};
 
-  const scrollTop = () => { if (mainRef.current) mainRef.current.scrollTop = 0; };
+  const mod=M[mi],les=mod?.lessons[li];
+  const finalOk=M.every(m=>qs[m.id]>=70);
 
-  const goHome = () => { setView({ page: "home" }); scrollTop(); };
-  const goModule = (mi, li = 0) => { setActiveModIdx(mi); setActiveLesIdx(li); setView({ page: "module" }); scrollTop(); };
-  const goQuiz = () => { setView({ page: "quiz" }); scrollTop(); };
-  const goFinal = () => { setView({ page: "final" }); scrollTop(); };
+  const compLes=useCallback(()=>{
+    setProgress(p=>({...p,[`${mod.id}-${li}`]:true}));
+    if(li<mod.lessons.length-1){setLi(li+1);scroll();}
+  },[mod,li]);
+  const compQuiz=useCallback(s=>{setQs(q=>({...q,[mod.id]:s}));setProgress(p=>({...p,[`${mod.id}-quiz`]:true}));},[mod]);
 
-  const mod = MODULES[activeModIdx];
-  const lesson = mod?.lessons[activeLesIdx];
-  const finalUnlocked = MODULES.every(m => quizScores[m.id] >= 70);
+  const crumbs=[{label:"Inicio",action:goHome}];
+  if(view.page==="module"||view.page==="quiz"){crumbs.push({label:mod.title,action:()=>goMod(mi)});if(view.page==="quiz")crumbs.push({label:"Quiz"});else if(les)crumbs.push({label:les.title});}
+  if(view.page==="final")crumbs.push({label:"Evaluación Final"});
 
-  const completeLesson = useCallback(() => {
-    setProgress(p => ({ ...p, [`${mod.id}-${activeLesIdx}`]: true }));
-    if (activeLesIdx < mod.lessons.length - 1) {
-      setActiveLesIdx(activeLesIdx + 1);
-      scrollTop();
-    }
-  }, [mod, activeLesIdx]);
+  const ti=M.reduce((a,m)=>a+m.lessons.length,0)+M.length;
+  const di=Object.values(progress).filter(Boolean).length;
+  const gp=Math.round((di/ti)*100);
 
-  const completeQuiz = useCallback((score) => {
-    setQuizScores(s => ({ ...s, [mod.id]: score }));
-    setProgress(p => ({ ...p, [`${mod.id}-quiz`]: true }));
-  }, [mod]);
+  return(
+    <div style={{width:"100%",maxWidth:"100vw",minHeight:"100vh",display:"flex",fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",background:T.bg,color:T.t1,overflowX:"hidden",boxSizing:"border-box"}}>
 
-  // Breadcrumb
-  const Breadcrumb = () => {
-    const crumbs = [{ label: "Inicio", action: goHome }];
-    if (view.page === "module" || view.page === "quiz") {
-      crumbs.push({ label: `Módulo ${activeModIdx + 1}: ${mod.title}`, action: () => goModule(activeModIdx) });
-      if (view.page === "quiz") crumbs.push({ label: "Quiz" });
-      else crumbs.push({ label: lesson.title });
-    }
-    if (view.page === "final") crumbs.push({ label: "Evaluación Final" });
-
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-        {crumbs.map((c, i) => (
-          <span key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {i > 0 && <span style={{ color: T.t4, fontSize: 11 }}>›</span>}
-            {c.action ? (
-              <button onClick={c.action} style={{ background: "none", border: "none", color: i === crumbs.length - 1 ? T.t1 : T.t4, cursor: "pointer", fontSize: 12, fontFamily: "inherit", padding: 0, fontWeight: i === crumbs.length - 1 ? 600 : 400 }}>{c.label}</button>
-            ) : (
-              <span style={{ fontSize: 12, color: T.t1, fontWeight: 600 }}>{c.label}</span>
-            )}
-          </span>
-        ))}
-      </div>
-    );
-  };
-
-  // Sidebar
-  const SidebarContent = () => {
-    const totalItems = MODULES.reduce((a, m) => a + m.lessons.length, 0) + MODULES.length;
-    const doneItems = Object.values(progress).filter(Boolean).length;
-
-    return (
-      <aside style={{ width: 260, minWidth: 260, background: T.bg1, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
-        <div style={{ padding: "18px 16px", borderBottom: `1px solid ${T.border}` }}>
-          <button onClick={goHome} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit", textAlign: "left", width: "100%" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: T.t1 }}>QA Mastery</div>
-            <div style={{ fontSize: 10, color: T.t4, marginTop: 2 }}>Programa Profesional</div>
-          </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-            <div style={{ flex: 1, height: 3, background: T.bg3, borderRadius: 2, overflow: "hidden" }}>
-              <div style={{ width: `${(doneItems / totalItems) * 100}%`, height: "100%", background: T.accent, borderRadius: 2 }} />
-            </div>
-            <span style={{ fontSize: 10, color: T.t4, fontWeight: 600 }}>{Math.round((doneItems / totalItems) * 100)}%</span>
-          </div>
+      {/* SIDEBAR */}
+      <aside style={{width:250,minWidth:250,maxWidth:250,background:T.bg1,borderRight:`1px solid ${T.border}`,display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,overflowY:"auto",overflowX:"hidden",boxSizing:"border-box",flexShrink:0}}>
+        <div style={{padding:"16px 14px",borderBottom:`1px solid ${T.border}`}}>
+          <button onClick={goHome} style={{background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"inherit",textAlign:"left"}}><div style={{fontSize:14,fontWeight:800,color:T.t1}}>QA Mastery</div></button>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}><div style={{flex:1,height:3,background:T.bg3,borderRadius:2,overflow:"hidden"}}><div style={{width:`${gp}%`,height:"100%",background:T.accent}}/></div><span style={{fontSize:10,color:T.t4,fontWeight:600}}>{gp}%</span></div>
         </div>
-
-        <nav style={{ flex: 1, overflow: "auto", padding: "6px 0" }}>
-          {MODULES.map((m, mi) => {
-            const lDone = m.lessons.filter((_, li) => progress[`${m.id}-${li}`]).length;
-            const qDone = quizScores[m.id] >= 70;
-            const allDone = lDone === m.lessons.length && qDone;
-            const isActive = (view.page === "module" || view.page === "quiz") && activeModIdx === mi;
-
-            return (
-              <div key={m.id}>
-                <button onClick={() => goModule(mi)}
-                  style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 14px", background: isActive ? T.accentBg : "transparent", border: "none", borderLeft: isActive ? `3px solid ${T.accent}` : "3px solid transparent", color: isActive ? T.accentL : T.t3, cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "all .1s" }}>
-                  <span style={{ width: 20, height: 20, borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, background: allDone ? T.greenBg : T.bg3, color: allDone ? T.green : T.t4, flexShrink: 0 }}>
-                    {allDone ? "✓" : mi + 1}
-                  </span>
-                  <span style={{ fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.title}</span>
-                </button>
-              </div>
-            );
-          })}
-
-          <div style={{ height: 1, background: T.border, margin: "6px 14px" }} />
-
-          <button onClick={goFinal} disabled={!finalUnlocked}
-            style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 14px", background: view.page === "final" ? T.accentBg : "transparent", border: "none", borderLeft: view.page === "final" ? `3px solid ${T.accent}` : "3px solid transparent", color: finalUnlocked ? (view.page === "final" ? T.accentL : T.t3) : T.t4, cursor: finalUnlocked ? "pointer" : "default", textAlign: "left", fontFamily: "inherit", opacity: finalUnlocked ? 1 : 0.45 }}>
-            <span style={{ width: 20, height: 20, borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, background: T.bg3, color: T.t4 }}>{finalUnlocked ? "F" : "🔒"}</span>
-            <span style={{ fontSize: 12, fontWeight: 600 }}>Evaluación Final</span>
+        <nav style={{flex:1,padding:"6px 0"}}>
+          {M.map((m,i)=>{const ld=m.lessons.filter((_,j)=>progress[`${m.id}-${j}`]).length;const qd=qs[m.id]>=70;const ad=ld===m.lessons.length&&qd;const ac=(view.page==="module"||view.page==="quiz")&&mi===i;
+          return <button key={m.id} onClick={()=>goMod(i)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 14px",background:ac?T.accentBg:"transparent",border:"none",borderLeft:ac?`3px solid ${T.accent}`:"3px solid transparent",color:ac?T.accentL:T.t3,cursor:"pointer",textAlign:"left",fontFamily:"inherit",boxSizing:"border-box"}}>
+            <span style={{width:20,height:20,borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,background:ad?T.greenBg:T.bg3,color:ad?T.green:T.t4,flexShrink:0}}>{ad?"✓":i+1}</span>
+            <span style={{fontSize:12,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.title}</span>
+          </button>;})}
+          <div style={{height:1,background:T.border,margin:"6px 14px"}}/>
+          <button onClick={goFinal} disabled={!finalOk} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 14px",background:view.page==="final"?T.accentBg:"transparent",border:"none",borderLeft:view.page==="final"?`3px solid ${T.accent}`:"3px solid transparent",color:finalOk?T.t3:T.t4,cursor:finalOk?"pointer":"default",textAlign:"left",fontFamily:"inherit",opacity:finalOk?1:.45,boxSizing:"border-box"}}>
+            <span style={{width:20,height:20,borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,background:T.bg3,color:T.t4}}>{finalOk?"F":"🔒"}</span>
+            <span style={{fontSize:12,fontWeight:600}}>Evaluación Final</span>
           </button>
         </nav>
       </aside>
-    );
-  };
 
-  return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", background: T.bg, color: T.t1, overflow: "hidden" }}>
-      <SidebarContent />
-
-      <main ref={mainRef} style={{ flex: 1, overflow: "auto" }}>
-        {/* Global header */}
-        <header style={{ padding: "12px 28px", borderBottom: `1px solid ${T.border}`, background: T.bg1, position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", gap: 12 }}>
-          {view.page !== "home" && (
-            <Btn variant="ghost" size="sm" onClick={view.page === "quiz" ? () => goModule(activeModIdx) : goHome} style={{ padding: "4px 8px", fontSize: 14 }}>←</Btn>
-          )}
-          <Breadcrumb />
+      {/* MAIN */}
+      <div ref={mainRef} style={{flex:1,minWidth:0,height:"100vh",overflowY:"auto",overflowX:"hidden",display:"flex",flexDirection:"column"}}>
+        <header style={{padding:"10px 24px",borderBottom:`1px solid ${T.border}`,background:T.bg1,position:"sticky",top:0,zIndex:10,display:"flex",alignItems:"center",gap:10,boxSizing:"border-box",width:"100%"}}>
+          {view.page!=="home"&&<Btn variant="ghost" size="sm" onClick={view.page==="quiz"?()=>goMod(mi):goHome} style={{padding:"4px 8px",fontSize:14}}>←</Btn>}
+          <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+            {crumbs.map((c,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+              {i>0&&<span style={{color:T.t4,fontSize:11}}>›</span>}
+              {c.action?<button onClick={c.action} style={{background:"none",border:"none",color:i===crumbs.length-1?T.t1:T.t4,cursor:"pointer",fontSize:12,fontFamily:"inherit",padding:0,fontWeight:i===crumbs.length-1?600:400}}>{c.label}</button>:<span style={{fontSize:12,color:T.t1,fontWeight:600}}>{c.label}</span>}
+            </span>)}
+          </div>
         </header>
 
-        {/* Content container */}
-        <Container>
-          {view.page === "home" && (
-            <HomeView modules={MODULES} progress={progress} quizScores={quizScores} onSelectModule={mi => goModule(mi)} onSelectFinal={goFinal} finalUnlocked={finalUnlocked} />
-          )}
+        <div style={{width:"100%",maxWidth:900,padding:"28px 32px",boxSizing:"border-box",textAlign:"left"}}>
+          {view.page==="home"&&<HomeView modules={M} progress={progress} quizScores={qs} onMod={goMod} onFinal={goFinal} finalUnlocked={finalOk}/>}
 
-          {view.page === "module" && lesson && (
-            <>
-              {/* Lesson navigation pills */}
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                  {mod.lessons.map((l, i) => (
-                    <Pill key={i} active={activeLesIdx === i} done={progress[`${mod.id}-${i}`]} onClick={() => { setActiveLesIdx(i); scrollTop(); }}>
-                      {i + 1}. {l.title.length > 28 ? l.title.slice(0, 28) + "…" : l.title}
-                    </Pill>
-                  ))}
-                  <Pill active={false} done={quizScores[mod.id] >= 70} onClick={goQuiz}>Quiz</Pill>
-                </div>
-              </div>
-              <LessonView lesson={lesson} onComplete={completeLesson} isComplete={progress[`${mod.id}-${activeLesIdx}`]} />
-            </>
-          )}
+          {view.page==="module"&&les&&<>
+            <div style={{marginBottom:20}}><P>{mod.desc}</P></div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:22}}>
+              {mod.lessons.map((l,i)=><Pill key={i} active={li===i} done={progress[`${mod.id}-${i}`]} onClick={()=>{setLi(i);scroll();}}>{i+1}. {l.title.length>24?l.title.slice(0,24)+"…":l.title}</Pill>)}
+              <Pill active={false} done={qs[mod.id]>=70} onClick={goQuiz}>Quiz</Pill>
+            </div>
+            <LessonView lesson={les} onComplete={compLes} isComplete={progress[`${mod.id}-${li}`]}/>
+          </>}
 
-          {view.page === "quiz" && (
-            <QuizView quiz={mod.quiz} moduleId={mod.id} onComplete={completeQuiz} onExit={() => goModule(activeModIdx)} existingScore={quizScores[mod.id]} />
-          )}
+          {view.page==="quiz"&&<QuizView quiz={mod.quiz} onComplete={compQuiz} onExit={()=>goMod(mi)} existingScore={qs[mod.id]}/>}
 
-          {view.page === "final" && (
-            finalUnlocked
-              ? <FinalExamView exam={FINAL_EXAM} onBack={goHome} />
-              : <Section>
-                  <P style={{ textAlign: "center", color: T.t4, padding: 40 }}>Completa todos los quizzes de módulos para desbloquear.</P>
-                </Section>
-          )}
-        </Container>
-      </main>
+          {view.page==="final"&&(finalOk?<FinalView exam={FE} onBack={goHome}/>:<Section><P style={{textAlign:"center",color:T.t4,padding:30}}>Completa todos los quizzes para desbloquear.</P></Section>)}
+        </div>
+      </div>
     </div>
   );
 }
